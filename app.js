@@ -97,11 +97,24 @@ class Piano {
 
 // ---------------- dock (shared piano area) ----------------
 const LEGEND = { q: ['#f5c542', 'Question'], ans: ['#4ade80', 'Answer / notes'], sel: ['#67d5f5', 'Your picks'], wrong: ['#f87171', 'Wrong pick'], hint: ['#b3a3ff', 'Missed'] };
-function setDock(note, legend = [], idle = false) {
+// The dock can collapse to a thin strip. user = explicit choice (remembered); otherwise on small
+// screens it collapses itself whenever the piano isn't needed. force = content needs the keys.
+const DOCK = { user: store.get('dockCollapsed', null), idle: false, force: false };
+const smallScreen = () => window.innerWidth <= 680 || window.innerHeight <= 620;
+function applyDock() {
+  const collapsed = DOCK.force ? false : DOCK.user !== null ? DOCK.user : (smallScreen() && DOCK.idle);
+  $('#dock').classList.toggle('collapsed', collapsed);
+  const b = $('#dockToggle'); b.textContent = collapsed ? '▴ Piano' : '▾ Hide'; b.setAttribute('aria-expanded', String(!collapsed));
+}
+function setDock(note, legend = [], idle = false, force = false) {
   $('#dockNote').innerHTML = note;
   $('#legend').innerHTML = legend.map(k => `<span><i style="background:${LEGEND[k][0]}"></i>${LEGEND[k][1]}</span>`).join('');
   $('#dock').classList.toggle('idle', idle);
+  DOCK.idle = idle; DOCK.force = force; applyDock();
 }
+function dockWake() { DOCK.idle = false; DOCK.force = true; $('#dock').classList.remove('idle'); applyDock(); }
+$('#dockToggle').onclick = () => { DOCK.force = false; DOCK.user = !$('#dock').classList.contains('collapsed'); store.set('dockCollapsed', DOCK.user); applyDock(); };
+window.addEventListener('resize', applyDock);
 
 // ---------------- stats ----------------
 let STATS = store.get('stats', {});
@@ -135,7 +148,7 @@ function showTab(name) {
   $('#explorePiano').classList.toggle('hidden', !['explore', 'create', 'learn'].includes(name));
   if (name === 'stats') renderStats();
   if (name === 'explore') setDock('Explorer: click keys to play them', ['ans']);
-  if (name === 'create') setDock('Create: the current chord lights up while the loop plays', ['ans']);
+  if (name === 'create') setDock('Create: the current chord lights up while the loop plays', ['ans'], smallScreen());
   if (name === 'quiz') quizDockNote();
   $('#main').scrollTop = 0;
 }
@@ -251,12 +264,12 @@ function tryMsg(t, info) { const el = $('#tryMsg'); el.innerHTML = t || ''; el.c
 function quizDockNote() {
   updateDockVisibility();
   if ($('#play').classList.contains('hidden')) { setDock('Free play: click any key', []); return; }
-  if (S.inLesson) { setDock('Mini-lesson: press ▶ Hear it', ['ans']); return; }
+  if (S.inLesson) { setDock('Mini-lesson: press ▶ Hear it', ['ans'], true); return; }
   if (!S.q) return;
   const q = S.q;
-  if (S.answered) setDock('Answer shown on the keyboard', q.type === 'piano' ? ['ans', 'wrong', 'hint'] : ['ans'], false);
-  else if (q.type === 'piano') setDock('<b>Your turn:</b> click the keys, then Submit', ['sel', 'wrong', 'hint']);
-  else if (q.show && q.show.length) setDock(q.hideLabels ? 'Labels hidden for this question' : 'Look at the highlighted keys', ['q']);
+  if (S.answered) { const has = q.type === 'piano' || q.reveal || (q.show && q.show.length); setDock(has ? 'Answer shown on the keyboard' : 'Free play: click any key', !has ? [] : q.type === 'piano' ? ['ans', 'wrong', 'hint'] : ['ans'], !has); }
+  else if (q.type === 'piano') setDock('<b>Your turn:</b> click the keys, then Submit', ['sel', 'wrong', 'hint'], false, true);
+  else if (q.show && q.show.length) setDock(q.hideLabels ? 'Labels hidden for this question' : 'Look at the highlighted keys', ['q'], false, true);
   else setDock('Not needed for this question: free play', [], true);
 }
 
@@ -277,7 +290,7 @@ function lessonHTML(id, kicker) {
 }
 function playDemo(id) {
   const d = LESSONS[id] && LESSONS[id].demo; if (!d) return;
-  quizPiano.clear(); quizPiano.setHidden(false);
+  quizPiano.clear(); quizPiano.setHidden(false); dockWake();
   if (d.seq) {
     const vs = d.seq.map(g => voice(g)); Snd.play(EV.seq(vs.map(mids), 0, 1.0));
     vs.forEach((v, i) => setTimeout(() => { if (!S.inLesson && !S.peek) return; quizPiano.clear(); quizPiano.mark(v, 'ans'); }, i * 1000));
@@ -328,6 +341,8 @@ function checkBreak() {
   $('#brStop').onclick = () => { b.classList.add('hidden'); finish(); };
 }
 
+// Which reference tool is most useful for each topic (shown as a small dot on its chip).
+const TOOL_HINT = { circle: 'circle', minor: 'circle', diatonic: 'circle', camelot: 'circle', advanced: 'circle', mediants: 'circle', progressions: 'circle', fifth: 'circle', modes: 'cheat', exotic: 'cheat', intervals: 'cheat', sevenths: 'cheat', extensions: 'cheat', penta: 'cheat', voicing: 'cheat', triads: 'finder', bass: 'finder', rhythm: 'tempo', structure: 'tempo' };
 function nextQuestion() {
   if (S.total && S.idx >= S.total) return finish();
   const pick = pickTopic();
@@ -361,6 +376,7 @@ function renderQuestion(pick) {
     quizPiano.selectable = true; $('#qPianoCtl').classList.remove('hidden'); opts.classList.add('hidden');
   }
   quizDockNote(); Tools.onQuestion(q); checkBreak();
+  $$('#toolbar button[data-tool]').forEach(b => { const on = TOOL_HINT[q.topic] === b.dataset.tool && !TOOLS[b.dataset.tool]; b.classList.toggle('suggest', on); b.title = on ? 'Handy for this question' : ''; });
   $('#main').scrollTop = 0;
   if (q.audio && $('#autoPlay').checked) setTimeout(() => Snd.play(q.audio), 150);
 }
@@ -520,9 +536,15 @@ function renderHome() {
   $('#weekDots').innerHTML = Coach.week().map(d => `<span class="${d.n ? 'on' : ''} ${d.today ? 'today' : ''}" title="${d.key}: ${d.n} answers"><i></i>${d.label}</span>`).join('');
   const td = Coach.totalDays(); $('#daysTotal').textContent = td ? `${td} practice day${td > 1 ? 's' : ''} in total` : 'Your first day starts now';
   const next = Coach.nextNew();
-  $('#path').innerHTML = TOPICS.map((t, i) => {
+  const node = t => {
     const st = Coach.status(t.id), b = Coach.box(t.id), tag = t.id === next ? 'Up next' : st === 'due' ? 'Review' : st === 'strong' ? '★' : '';
-    return `<button class="pnode ${st} ${t.id === next ? 'next' : ''}" data-t="${t.id}" title="${t.name}: ${st}"><span class="pt"><span class="dot st-${st}"></span><span class="pn">${i + 1}</span>${t.name}<span class="tag">${tag}</span></span><span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span></button>`;
+    return `<button class="pnode ${st} ${t.id === next ? 'next' : ''}" data-t="${t.id}" title="${t.name}: ${st}"><span class="pt"><span class="dot st-${st}"></span><span class="pn">${TOPICS.indexOf(t) + 1}</span>${t.name}<span class="tag">${tag}</span></span><span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span></button>`;
+  };
+  // One group per Part; only the Parts you're working in are open, to keep the page calm.
+  $('#path').innerHTML = [1, 2, 3, 4].map(p => {
+    const ts = TOPICS.filter(t => t.part === p), started = ts.filter(t => Coach.status(t.id) !== 'new').length, due = ts.filter(t => Coach.status(t.id) === 'due').length;
+    const open = ts.some(t => t.id === next) || due > 0;
+    return `<details class="pgroup" ${open ? 'open' : ''}><summary><b>${PART_NAMES[p]}</b><span class="muted small">${started}/${ts.length} started${due ? ` · <span class="duetxt">${due} to review</span>` : ''}</span><span class="pmini">${ts.map(t => `<i class="st-${Coach.status(t.id)}"></i>`).join('')}</span></summary><div class="path">${ts.map(node).join('')}</div></details>`;
   }).join('');
   $$('#path .pnode').forEach(b => b.onclick = () => startTopic(b.dataset.t));
 }
@@ -560,13 +582,33 @@ function renderStats() {
     <div class="tile"><div class="k">Weakest</div><div class="v sm">${ranked.length ? ranked[0].name : '–'}</div></div></div>`;
   const parts = [1, 2, 3, 4].map(p => `<div class="panel"><div class="panel-title">${PART_NAMES[p]}</div>${TOPICS.filter(t => t.part === p).map(t => {
     const s = STATS[t.id];
-    return s ? `<div class="srow"><span>${t.name}</span><span class="n">${s.c}/${s.t}</span><span class="n">${Math.round(s.c / s.t * 100)}%</span>${meter(s.c / s.t)}</div>`
+    const d = Coach.dueIn(t.id), strong = Coach.box(t.id) >= 4;
+    const rv = d === null ? '' : d <= 0 ? '<small class="rv due">review due</small>' : `<small class="rv">${strong ? '★ strong · ' : ''}next review in ${d} day${d > 1 ? 's' : ''}</small>`;
+    return s ? `<div class="srow"><span>${t.name}${rv}</span><span class="n">${s.c}/${s.t}</span><span class="n">${Math.round(s.c / s.t * 100)}%</span>${meter(s.c / s.t)}</div>`
       : `<div class="srow"><span>${t.name}</span><span class="n">–</span><span class="n"></span><span class="muted small">not tried</span></div>`;
   }).join('')}</div>`).join('');
-  $('#statsBody').innerHTML = tiles + parts;
+  const heat = `<div class="panel"><div class="panel-title">Last 5 weeks</div><div class="heat">${Coach.history(35).map(d => `<i class="h${d.n === 0 ? 0 : d.n < 10 ? 1 : d.n < 25 ? 2 : 3}" title="${d.key}: ${d.n} answers"></i>`).join('')}</div><div class="muted small">${Coach.totalDays()} practice days in total. There's no streak to break: every day you show up counts.</div></div>`;
+  $('#statsBody').innerHTML = tiles + heat + parts;
 }
 $('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); Coach.reset(); Learn.reset(); renderStats(); renderSetup(); renderHome(); } };
 $('#practiseWeak').onclick = () => startQuiz(weakest(5));
+// Backup / restore: progress lives in this browser only, so this moves it between devices or addresses.
+$('#exportProg').onclick = () => {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('theorylab.')) data[k] = localStorage.getItem(k); }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  a.download = `theory-lab-progress-${new Date().toISOString().slice(0, 10)}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('#importProg').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text()), keys = Object.keys(data).filter(k => k.startsWith('theorylab.') && typeof data[k] === 'string');
+    if (!keys.length) throw new Error('empty');
+    if (!confirm("Replace this browser's progress with the backup?")) return;
+    keys.forEach(k => localStorage.setItem(k, data[k])); location.reload();
+  } catch (err) { alert('That file is not a Theory Lab backup.'); }
+};
 
 // =====================================================================
 //  EXPLORER

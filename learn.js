@@ -32,7 +32,7 @@ const Learn = (() => {
     return `<div class="libtable">${PROG_LIB.map((p, i) => `<div class="librow"><div><b>${p.name}</b> <span class="chip">${p.mood}</span> <span class="muted small">${p.mode}</span><div class="lr">${progLabel(p.romans)}</div><div class="muted small">${p.why}</div></div><button class="sm" data-lib="${i}">▶ Open in Create</button></div>`).join('')}</div>`;
   }
   function playEx(e) {
-    const [, how, notes] = e; exPiano.clear(); exPiano.setHidden(false);
+    const [, how, notes] = e; exPiano.clear(); exPiano.setHidden(false); dockWake();
     if (how === 'seq') {
       const vs = notes.map(g => voice(g)); Snd.play(EV.seq(vs.map(mids), 0, 1.0));
       vs.forEach((v, i) => setTimeout(() => { if (!isOpen()) return; exPiano.clear(); exPiano.mark(v, 'ans'); }, i * 1000));
@@ -83,7 +83,7 @@ const Learn = (() => {
     if ($('#lPractice')) $('#lPractice').onclick = () => { const id = L.id; close(); startTopic(id); };
     if ($('#lNext')) $('#lNext').onclick = () => open(nextId());
     exPiano.clear();
-    setDock(k && k.ex ? 'Press an ▶ example to hear it and see it here' : 'Free play: click any key', ['ans']);
+    setDock(k && k.ex ? 'Press an ▶ example to hear it and see it here' : 'Free play: click any key', ['ans'], true);
     $('#main').scrollTop = 0;
   }
   const nextId = () => order[order.indexOf(L.id) + 1];

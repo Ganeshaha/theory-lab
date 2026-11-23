@@ -97,8 +97,14 @@ const Coach = (() => {
     for (let i = 6; i >= 0; i--) { const x = new Date(d); x.setDate(d.getDate() - i); out.push({ key: dateKey(x), label: 'SMTWTFS'[x.getDay()], n: days[dateKey(x)] || 0, today: i === 0 }); }
     return out;
   }
+  function history(n) {
+    const out = [], d = new Date();
+    for (let i = n - 1; i >= 0; i--) { const x = new Date(d); x.setDate(d.getDate() - i); out.push({ key: dateKey(x), n: days[dateKey(x)] || 0 }); }
+    return out;
+  }
   return {
-    onResult, addXP, buildPlan, level, status, box, recentAcc, week,
+    onResult, addXP, buildPlan, level, status, box, recentAcc, week, history,
+    dueIn: id => srs[id] ? Math.ceil((srs[id].due - Date.now()) / DAY) : null,
     xp: () => xp, totalDays: () => Object.keys(days).length, today: () => days[dateKey()] || 0,
     goal: () => get('goal', 15), setGoal: g => set('goal', g),
     nextNew: () => ORDER.find(id => !srs[id] && id !== 'ear'),

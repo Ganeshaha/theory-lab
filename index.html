@@ -17,15 +17,6 @@
       <button class="tab" data-tab="explore" role="tab">Explorer</button>
       <button class="tab" data-tab="stats" role="tab">Progress</button>
     </nav>
-    <label class="lblmode" title="How black keys are labelled on the piano">
-      <span>Key labels</span>
-      <select id="labelMode">
-        <option value="both">C♯ / D♭</option>
-        <option value="sharp">Sharps</option>
-        <option value="flat">Flats</option>
-        <option value="off">Hidden</option>
-      </select>
-    </label>
   </header>
 
   <main id="main">
@@ -57,7 +48,7 @@
             <div><div class="panel-title">Your path</div><p class="muted small">Follows the course order. Click any topic for a focused 8-question session (with a mini-lesson if it's new).</p></div>
             <div class="path-legend"><span><i class="st-new"></i>New</span><span><i class="st-due"></i>Review due</span><span><i class="st-learning"></i>Learning</span><span><i class="st-strong"></i>Strong</span></div>
           </div>
-          <div id="path" class="path"></div>
+          <div id="path"></div>
         </div>
 
         <details class="panel custom" id="customBox">
@@ -303,7 +294,7 @@
       <div class="wrap">
         <div class="page-head">
           <div><h1>Progress</h1><p class="muted">Saved in this browser. Aim for 80%+ on every topic, then keep revisiting with mixed sessions.</p></div>
-          <div class="btnrow"><button id="practiseWeak" class="primary">Practise weakest 5 ▸</button><button id="resetStats" class="ghost">Reset</button></div>
+          <div class="btnrow"><button id="practiseWeak" class="primary">Practise weakest 5 ▸</button><button id="exportProg" title="Download your progress as a file">⤓ Back up</button><button id="importProg" title="Load progress from a backup file">⤒ Restore</button><input type="file" id="importFile" accept=".json,application/json" hidden><button id="resetStats" class="ghost">Reset</button></div>
         </div>
         <div id="statsBody"></div>
       </div>
@@ -314,6 +305,16 @@
     <div class="dock-head">
       <span id="dockNote" class="muted small"></span>
       <span class="legend" id="legend"></span>
+      <label class="lblmode" title="How black keys are labelled on the piano">
+        <span>Labels</span>
+        <select id="labelMode">
+          <option value="both">C♯ / D♭</option>
+          <option value="sharp">Sharps</option>
+          <option value="flat">Flats</option>
+          <option value="off">Hidden</option>
+        </select>
+      </label>
+      <button id="dockToggle" class="ghost sm" aria-expanded="true" title="Show or hide the piano">▾ Hide</button>
     </div>
     <div class="dock-scroll" id="dockScroll">
       <div id="quizPiano"></div>

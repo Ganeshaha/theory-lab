@@ -249,6 +249,7 @@ const Create = (() => {
   function loadLib(p, msg) {
     pushHist(); CR.mode = p.mode; CR.sev = p.romans.some(r => /7/.test(r)); CR.slots = p.romans.map(pairFor);
     spiceMsg = `${msg || '📂'} <b>${p.name}</b> (${progLabel(p.romans)}): ${p.why}`; render(); renderTips(true);
+    requestAnimationFrame(() => $('#crSlots').scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
   }
   function load({ tonic, mode, romans }) {
     stop(); CR.root = ROOTS.includes(tonic) ? tonic : DEFAULT_NAMES[pc(tonic)]; CR.mode = mode;

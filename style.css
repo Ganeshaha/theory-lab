@@ -490,3 +490,50 @@ body.focus #qPrompt { font-size: 24px; }
   .card-body { font-size: 16px; }
   .librow { flex-direction: column; align-items: flex-start; }
 }
+
+/* ============ design pass 3: collapsible dock, compact phone header, calmer home ============ */
+.dock-head { justify-content: flex-start; }
+#dockNote { margin-right: auto; }
+.dock-head .lblmode { margin-left: 0; font-size: 12px; }
+.dock-head .lblmode select { padding: 2px 24px 2px 8px; font-size: 12px; }
+#dockToggle { padding: 2px 8px; font-size: 12px; white-space: nowrap; }
+.dock.collapsed { padding-bottom: var(--s2); }
+.dock.collapsed .dock-scroll, .dock.collapsed .legend, .dock.collapsed .lblmode { display: none; }
+.dock.collapsed .dock-head { margin-bottom: 0; }
+
+.toolbar button.suggest::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: var(--accent2); vertical-align: 2px; }
+
+.pgroup { border-top: 1px solid var(--line); }
+.pgroup:first-child { border-top: 0; }
+.pgroup > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--s3); padding: 10px 0; flex-wrap: wrap; }
+.pgroup > summary::-webkit-details-marker { display: none; }
+.pgroup > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+.pgroup[open] > summary::before { transform: rotate(90deg); }
+.pgroup > summary b { font-size: 14px; }
+.pmini { display: flex; gap: 3px; margin-left: auto; }
+.pmini i { display: block; width: 10px; height: 10px; border-radius: 3px; }
+.duetxt { color: var(--warn); }
+.pgroup .path { margin-bottom: var(--s3); }
+
+.srow .rv { display: block; font-size: 12px; color: var(--dim); }
+.srow .rv.due { color: var(--warn); }
+.heat { display: grid; grid-template-rows: repeat(7, 14px); grid-auto-flow: column; gap: 3px; justify-content: start; margin: var(--s2) 0; }
+.heat i { width: 14px; border-radius: 3px; background: var(--panel3); }
+.heat .h1 { background: rgba(34, 197, 94, .35); }
+.heat .h2 { background: rgba(34, 197, 94, .65); }
+.heat .h3 { background: var(--good); }
+
+@media (max-width: 680px) {
+  .topbar { flex-wrap: nowrap; gap: var(--s2); }
+  .brand { font-size: 0; gap: 0; }
+  .tabs { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .tab { padding: 6px 7px; font-size: 13px; white-space: nowrap; }
+  .toolbar { position: static; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: var(--s2); }
+  .toolbar button { flex: none; }
+  .toolbar .grow, .toolbar-label, .legend { display: none; }
+  .dock-head .lblmode span { display: none; }
+  .piano { height: 120px; }
+  .pmini { display: none; }
+}
+.qbar-right { flex-wrap: nowrap; white-space: nowrap; }
+.heat { margin-right: var(--s5); }
