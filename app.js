@@ -462,7 +462,7 @@ function showAnswer() {
 }
 function conclude(result, answerText, extra = '') {
   const q = S.q, ok = result === 'first'; record(q.topic, ok);
-  const r = Coach.onResult(q.topic, result); S.xp += r.gain;
+  const r = Coach.onResult(q.topic, result); S.xp += r.gain; renderStatus();
   if (r.boxUp && !S.boxUps.includes(q.topic)) S.boxUps.push(q.topic);
   if (r.levelUp) S.levelUps.push(r.levelUp);
   if (ok) { S.score++; S.streak++; S.best = Math.max(S.best, S.streak); }
@@ -561,8 +561,16 @@ const Flow = {
   },
 };
 
+// ---- status pill in the top bar ----
+function renderStatus() {
+  const L = Coach.level(), t = Coach.today(), g = Coach.goal();
+  $('#statusPill').innerHTML = `<span class="lv">${L.lv}</span><span><b>${L.into}</b>/${L.need} XP</span><span class="sep"></span><span>Today <b>${Math.min(t, g)}/${g}</b></span><span class="bar ${t >= g ? 'done' : ''}"><i style="width:${Math.min(100, t / g * 100)}%"></i></span>`;
+}
+$('#statusPill').onclick = () => $('.tab[data-tab=stats]').click();
+
 // ---- home ----
 function renderHome() {
+  renderStatus();
   const P = Coach.buildPlan(10), L = Coach.level(), today = Coach.today(), goal = Coach.goal(), first = !Object.keys(STATS).length && !Coach.xp();
   $('#heroKicker').textContent = first ? 'Welcome' : 'Today';
   $('#heroTitle').textContent = first ? 'Start with a 5-minute session' : P.mode === 'review' ? 'Review day: let\'s lock in what you know' : today >= goal ? 'Goal done. Bonus round?' : 'Ready when you are';
@@ -631,7 +639,7 @@ function renderStats() {
       : `<div class="srow"><span>${t.name}</span><span class="n">–</span><span class="n"></span><span class="muted small">not tried</span></div>`;
   }).join('')}</div>`).join('');
   const heat = `<div class="panel"><div class="panel-title">Last 5 weeks</div><div class="heat">${Coach.history(35).map(d => `<i class="h${d.n === 0 ? 0 : d.n < 10 ? 1 : d.n < 25 ? 2 : 3}" title="${d.key}: ${d.n} answers"></i>`).join('')}</div><div class="muted small">${Coach.totalDays()} practice days in total. There's no streak to break: every day you show up counts.</div></div>`;
-  $('#statsBody').innerHTML = tiles + heat + parts;
+  $('#statsBody').innerHTML = `<div class="stats-top">${tiles}${heat}</div><div class="stats-parts">${parts}</div>`;
 }
 $('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); Coach.reset(); Learn.reset(); renderStats(); renderSetup(); renderHome(); } };
 $('#practiseWeak').onclick = () => startQuiz(weakest(5));

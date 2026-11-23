@@ -12,7 +12,7 @@
 </head>
 <body>
 <div class="app">
-  <header class="topbar">
+  <header class="topbar"><div class="topbar-in">
     <div class="brand"><span class="logo">♪</span> Theory Lab</div>
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="quiz" role="tab">Practice</button>
@@ -21,7 +21,8 @@
       <button class="tab" data-tab="explore" role="tab">Explorer</button>
       <button class="tab" data-tab="stats" role="tab">Progress</button>
     </nav>
-  </header>
+    <button id="statusPill" class="status" title="Your level and today's goal. Click for Progress."></button>
+  </div></header>
 
   <main id="main">
     <!-- ================= PRACTICE ================= -->
@@ -201,11 +202,8 @@
     <!-- ================= CREATE ================= -->
     <section id="tab-create" class="tabpane">
       <div class="wrap">
-        <div class="page-head">
-          <div><h1>Create</h1><p class="muted">Build a chord loop, hear it with bass and drums, then export MIDI straight into your DAW.</p></div>
-        </div>
         <div class="create-grid">
-          <div class="panel">
+          <div class="panel cr-palette">
             <div class="field-row cr-key">
               <label class="field"><span class="field-label">Key</span><select id="crRoot"></select></label>
               <div class="field"><span class="field-label">Mode</span><div class="seg" id="crMode"><button data-m="major" class="active">Major</button><button data-m="minor">Minor</button></div></div>
@@ -229,16 +227,16 @@
               </div>
               <div id="chMsg">Hear a hidden loop, then rebuild it with the pads. It trains the skill of working out chords from tracks.</div>
             </div>
+          </div>
 
-            <div class="cr-label">Your loop <span class="muted small">(1 bar each · click a chord to remove · up to 8)</span></div>
+          <div class="panel cr-main">
+            <div class="cr-label cr-loophead"><span>Your loop <span class="muted small">(1 bar each · click a chord to remove · up to 8)</span></span><span class="grow"></span><button id="crUndo" class="ghost sm" title="Undo">↶ Undo</button><button id="crClear" class="ghost sm">Clear</button></div>
             <div class="slots" id="crSlots"></div>
 
             <div class="btnrow cr-transport">
               <button id="crPlay" class="primary lg">▶ Play</button>
               <button id="crInspire">🎲 Inspire me</button>
               <button id="crSpice" title="Apply a real technique to your loop and explain it">✨ Spice it</button>
-              <button id="crUndo" class="ghost" title="Undo">↶ Undo</button>
-              <button id="crClear" class="ghost">Clear</button>
               <span class="grow"></span>
               <button id="crExport">⤓ Export MIDI</button>
             </div>
@@ -254,7 +252,7 @@
             <div id="crTips" class="crtips"></div>
           </div>
 
-          <div class="panel">
+          <div class="panel cr-side">
             <div class="panel-title">Sound</div>
             <div class="cr-sound">
               <label class="field"><span class="field-label">Chord sound</span><select id="crTimbre"><option value="pad">Pad</option><option value="keys">Keys</option><option value="pluck">Pluck</option></select></label>
@@ -307,20 +305,21 @@
             <div id="exDiatonic"></div>
           </div>
 
+          <div class="ex-side">
           <div class="panel">
             <div class="panel-title">Circle of fifths</div>
             <p class="muted small">Click a key. Outer ring = major, inner = relative minor. Neighbours are highlighted: they're the safest keys to borrow chords from or modulate to.</p>
             <div id="circle"></div>
           </div>
-        </div>
-
-        <div class="panel">
+          <div class="panel">
           <div class="panel-title">Tempo &amp; delay calculator</div>
           <div class="bpm-row">
             <label class="field"><span class="field-label">BPM</span><input type="number" id="bpmIn" value="128" min="20" max="400"></label>
             <div id="bpmExtra" class="muted small"></div>
           </div>
           <div id="bpmOut" class="tiles"></div>
+        </div>
+          </div>
         </div>
       </div>
     </section>

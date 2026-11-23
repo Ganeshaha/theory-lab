@@ -57,7 +57,7 @@ const Learn = (() => {
         </div>
         <div class="wbox links"><div class="wb-t">📚 Go deeper</div>${c.links.map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${n} ↗</a>`).join('')}<div class="muted small" style="margin-top:6px">Also: ${c.book} of J. Anthony Allen's <i>Music Theory for Electronic Music Producers</i>.</div></div>
         <div class="btnrow wrap-cta"><button class="primary lg" id="lPractice">▶ Practise this topic (8 questions)</button>${nextId() ? `<button id="lNext">Next lesson: ${topicName(nextId())} →</button>` : ''}</div>`;
-      if (!learned.has(L.id)) { learned.add(L.id); store.set('learned', [...learned]); const lv = Coach.addXP(15); body = `<div class="lesson-done">✓ Lesson complete <span class="xp-pop">+15 XP</span>${lv ? `<span class="lvl-pop">Level ${lv}!</span>` : ''}</div>` + body; if ($('#sfx').checked) sfx('first'); }
+      if (!learned.has(L.id)) { learned.add(L.id); store.set('learned', [...learned]); const lv = Coach.addXP(15); renderStatus(); body = `<div class="lesson-done">✓ Lesson complete <span class="xp-pop">+15 XP</span>${lv ? `<span class="lvl-pop">Level ${lv}!</span>` : ''}</div>` + body; if ($('#sfx').checked) sfx('first'); }
     }
     $('#learnReader').innerHTML = `
       <div class="reader-head">
