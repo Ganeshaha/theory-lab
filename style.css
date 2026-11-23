@@ -636,3 +636,6 @@ body.tools-side .dock-head, body.tools-side .dock-scroll { max-width: 1272px; }
 .nextup { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
 .nextup .step { max-width: 620px; margin: 6px 0 var(--s3); }
 @media (max-width: 680px) { .step .st-s { white-space: normal; } .step .go kbd { display: none; } }
+/* breathing room under the keyboard so the keys do not sit on the screen edge */
+.dock:not(.collapsed) { padding-bottom: var(--s5); }
+@media (max-width: 680px) { .dock:not(.collapsed) { padding-bottom: var(--s4); } }
