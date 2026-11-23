@@ -64,7 +64,7 @@ const LESSONS = {
   melody: {
     idea: '<b>Chord tones</b> are stable. Other notes create <b>movement</b>.',
     points: ['Land on chord tones on strong beats.', '<b>Passing tone</b>: steps between two different chord tones. <b>Neighbour tone</b>: steps away and back.', 'Mostly steps, a few leaps. After a leap, step back the other way.'],
-    demo: { arp: ['C', 'D', 'E', 'G', 'E', 'D', 'C'] },
+    demo: { mel: ['C', 'D', 'E', 'G', 'E', 'D', 'C'] },
     tip: 'Write a 2-bar motif, then repeat it with one small change.',
   },
   bass: {
@@ -147,6 +147,12 @@ const LESSONS = {
     idea: 'The <b>Camelot wheel</b> = the circle of fifths with numbers. A = minor, B = major.',
     points: ['Same number = relative keys (8A = A minor, 8B = C major).', '±1 number = neighbour key, which mixes smoothly.', 'Big jumps on the wheel = clashing keys.'],
     tip: 'Write your next track in a key that mixes with your last one.',
+  },
+  earkey: {
+    idea: 'Inside a key, every note has a <b>feeling</b> compared with home (the tonic).',
+    points: ['1 = home · 5 = strong and open · 3 = the mood (major or minor).', '7 pulls up to 1; 4 leans down to 3; 2 falls to 1.', 'Trick: sing the note, walk down the scale to home, and count the steps.'],
+    demo: { seq: [['C', 'E', 'G'], ['F', 'A', 'C'], ['G', 'B', 'D'], ['C', 'E', 'G']] },
+    tip: 'This is the skill for working out melodies and bass lines from tracks by ear.',
   },
   ear: {
     idea: 'Hearing is the real goal. Listen for <b>mood first</b>, then the details.',

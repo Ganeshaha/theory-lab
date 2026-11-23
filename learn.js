@@ -37,8 +37,8 @@ const Learn = (() => {
       const vs = notes.map(g => voice(g)); Snd.play(EV.seq(vs.map(mids), 0, 1.0));
       vs.forEach((v, i) => setTimeout(() => { if (!isOpen()) return; exPiano.clear(); exPiano.mark(v, 'ans'); }, i * 1000));
     } else {
-      let v = voice(notes, 60); if (Math.max(...mids(v)) > HI) v = voice(notes, 48);
-      exPiano.mark(v, 'ans'); Snd.play(how === 'arp' ? EV.arp(mids(v), 0, 0.26, 0.45) : EV.chord(mids(v)));
+      let v = how === 'mel' ? melodyVoice(notes) : voice(notes, 60); if (how !== 'mel' && Math.max(...mids(v)) > HI) v = voice(notes, 48);
+      exPiano.mark(v, 'ans'); Snd.play(how === 'chord' ? EV.chord(mids(v)) : EV.arp(mids(v), 0, how === 'mel' ? 0.34 : 0.26, 0.45));
     }
   }
   function render() {

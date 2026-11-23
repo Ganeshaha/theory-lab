@@ -131,9 +131,9 @@ const COURSE = {
     book: 'Course Part 2 · book ch. 18 & 21', mins: 6,
     cards: [
       { t: 'Chord tones are your anchors', b: `The notes of the current chord are the <b>stable</b> ones. Landing on them on <b>strong beats</b> (beat 1, beat 3) sounds intentional and resolved.<br><br>Other scale notes create movement and are best placed between the anchors.`, ex: [['Chord tones over C', 'arp', ['C', 'E', 'G', 'C']]] },
-      { t: 'Passing and neighbour tones', b: `<b>Passing tone</b>: steps between two <i>different</i> chord tones (C–<b>D</b>–E).<br><b>Neighbour tone</b>: steps away and comes back to the <i>same</i> chord tone (E–<b>F</b>–E).<br><br>These are the "glue" of good melodies.`, ex: [['Passing: C D E', 'arp', ['C', 'D', 'E']], ['Neighbour: E F E', 'arp', ['E', 'F', 'E']]] },
-      { t: 'Shape: steps, leaps, contour', b: `Good melodies mostly move by <b>step</b>, with occasional <b>leaps</b> for drama. After a big leap, step back the other way.<br><br>Give a phrase <b>one high point</b>, and aim for an arch or wave shape rather than a flat line.`, ex: [['Arch-shaped phrase', 'arp', ['C', 'D', 'E', 'G', 'A', 'G', 'E', 'D', 'C']]] },
-      { t: 'Motifs and repetition', b: `Hooks are built from a short <b>motif</b> (1–2 bars) that repeats with small changes: a different last note, a shifted rhythm, the same shape on a new chord.<br><br>Try <b>call and response</b>: bar 1 asks (ends unresolved), bar 2 answers (lands on the tonic). Pentatonic notes are a safe starting palette.`, ex: [['Minor pentatonic motif', 'arp', ['A', 'C', 'D', 'E', 'D', 'C', 'A']]] },
+      { t: 'Passing and neighbour tones', b: `<b>Passing tone</b>: steps between two <i>different</i> chord tones (C–<b>D</b>–E).<br><b>Neighbour tone</b>: steps away and comes back to the <i>same</i> chord tone (E–<b>F</b>–E).<br><br>These are the "glue" of good melodies.`, ex: [['Passing: C D E', 'arp', ['C', 'D', 'E']], ['Neighbour: E F E', 'mel', ['E', 'F', 'E']]] },
+      { t: 'Shape: steps, leaps, contour', b: `Good melodies mostly move by <b>step</b>, with occasional <b>leaps</b> for drama. After a big leap, step back the other way.<br><br>Give a phrase <b>one high point</b>, and aim for an arch or wave shape rather than a flat line.`, ex: [['Arch-shaped phrase', 'mel', ['C', 'D', 'E', 'G', 'A', 'G', 'E', 'D', 'C']]] },
+      { t: 'Motifs and repetition', b: `Hooks are built from a short <b>motif</b> (1–2 bars) that repeats with small changes: a different last note, a shifted rhythm, the same shape on a new chord.<br><br>Try <b>call and response</b>: bar 1 asks (ends unresolved), bar 2 answers (lands on the tonic). Pentatonic notes are a safe starting palette.`, ex: [['Minor pentatonic motif', 'mel', ['A', 'C', 'D', 'E', 'D', 'C', 'A']]] },
     ],
     daw: 'Write melodies over a looping chord progression (use the Create tab). Turn on scale highlighting, then vary rhythm before you vary pitch.',
     mistakes: ['Too many notes: leave space.', 'Never landing on chord tones, which makes the melody feel aimless.', 'Constant leaps, which are hard to follow.'],
@@ -145,7 +145,7 @@ const COURSE = {
     cards: [
       { t: 'The bass defines the harmony', b: `Whatever note is lowest tells the ear what the chord <i>is</i>. Most of the time the bass plays the <b>root</b> of each chord, the foundation everything else sits on.` },
       { t: 'Inversions and slash chords', b: `Put the chord's 3rd or 5th in the bass (an <b>inversion</b>) and the bass line moves more smoothly: C – C/E – F instead of C – F.<br><br>A <b>slash chord</b> like A♭/F means "A♭ chord over an F bass". The book explains the last bar of Aphex Twin's "Windowlicker" this way (i–III–VI–VI/F in C minor).`, ex: [['C → C/E → F', 'seq', [['C', 'E', 'G'], ['E', 'G', 'C'], ['F', 'A', 'C']]]] },
-      { t: 'Rhythm patterns for bass', b: `• <b>Sustained root</b>: deep, simple (ambient, intros).<br>• <b>Off-beat</b>: notes between the kicks (classic house).<br>• <b>Driving 8ths</b>: steady energy (trance, techno).<br>• <b>Root–5th alternation</b>: movement without changing the harmony.<br>• <b>Octave jumps</b>: bounce (disco, nu-disco).`, ex: [['Root–5th alternation', 'arp', ['C', 'G', 'C', 'G']]] },
+      { t: 'Rhythm patterns for bass', b: `• <b>Sustained root</b>: deep, simple (ambient, intros).<br>• <b>Off-beat</b>: notes between the kicks (classic house).<br>• <b>Driving 8ths</b>: steady energy (trance, techno).<br>• <b>Root–5th alternation</b>: movement without changing the harmony.<br>• <b>Octave jumps</b>: bounce (disco, nu-disco).`, ex: [['Root–5th alternation', 'mel', ['C', 'G', 'C', 'G']]] },
       { t: 'Low-end rules', b: `Keep the sub <b>mono and simple</b>. Avoid 3rds down low, because they clash and muddy. <b>Tune your kick and bass to the key</b> (see Pitch & Tuning), and sidechain the bass to the kick so they don't fight.` },
     ],
     daw: 'Write the bass on its own track an octave or two below the chords. Try the same progression with each bass rhythm in the Create tab to hear how much genre comes from the bass alone.',
@@ -313,6 +313,19 @@ const COURSE = {
     daw: 'Note the key (and Camelot code) of every track you finish in its file name.',
     mistakes: ['Trusting key detection blindly. Check by ear, since it often confuses relative keys.'],
     links: [['Harmonic mixing', W('Harmonic_mixing')], ['Camelot wheel (Mixed In Key)', 'https://mixedinkey.com/camelot-wheel/']],
+  },
+
+  earkey: {
+    book: 'Producer toolkit', mins: 4,
+    cards: [
+      { t: 'Notes have feelings inside a key', b: `A note on its own means nothing. Inside a key, each scale degree has a <b>feeling</b> compared with home:<br>• <b>1</b> is home. <b>5</b> is strong and open. <b>3</b> carries the mood.<br>• <b>7</b> pulls up to 1. <b>4</b> leans down to 3. <b>2</b> wants to fall to 1.<br><br>Learn those feelings and you can name notes by ear, which is how producers work out melodies and bass lines from tracks they love.`, ex: [['1 – 3 – 5 – 1', 'arp', ['C', 'E', 'G', 'C']], ['7 → 1', 'arp', ['B', 'C']], ['4 → 3', 'mel', ['F', 'E']], ['2 → 1', 'mel', ['D', 'C']]] },
+      { t: 'Set the key first', b: `Before you can hear a degree, your ear needs to know where home is. The chords <b>I – IV – V – I</b> do that, and every question in this topic plays them first.<br><br>Then compare the mystery note with home: <b>sing the note</b>, walk down the scale to the tonic, and count the steps you took.`, ex: [['I – IV – V – I in C', 'seq', [['C', 'E', 'G'], ['F', 'A', 'C'], ['G', 'B', 'D'], ['C', 'E', 'G']]]] },
+      { t: 'Home or away', b: `A phrase that ends on <b>1</b> sounds finished. Ending on <b>5</b> sounds like a question. Ending on <b>2</b> or <b>7</b> sounds unfinished.<br><br>Use that on purpose: stop a build-up on an unfinished note, then resolve it on the drop.`, ex: [['Ends on 1 (finished)', 'mel', ['E', 'D', 'C', 'D', 'C']], ['Ends on 5 (a question)', 'mel', ['E', 'D', 'C', 'E', 'G']], ['Ends on 2 (unfinished)', 'mel', ['E', 'F', 'E', 'C', 'D']]] },
+      { t: 'Follow the bass', b: `Bass notes are usually chord roots. If you can hear where the bass moves (1 → 4, 1 → 5, 1 → 6), you can work out a track's whole chord progression.<br><br>With a MIDI keyboard connected, the "find the note" questions let you answer by playing, which is the same thing you do when figuring out a tune.`, ex: [['Bass: 1 → 4 → 5 → 1', 'mel', ['C', 'F', 'G', 'C']]] },
+    ],
+    daw: 'Loop 4 bars of a track you like, hum the bass note under each chord, and find those notes on your keyboard. Check with the Circle & keys tool which key they fit.',
+    mistakes: ['Guessing before the key is clear in your ear. Replay the chords first (R).', 'Trying to name the note without singing it. Singing is the shortcut.'],
+    links: [['Ear training', W('Ear_training')], ['Scale degree', W('Degree_(music)')], ['musictheory.net exercises', 'https://www.musictheory.net/exercises']],
   },
 
   ear: {

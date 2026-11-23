@@ -228,7 +228,8 @@ const TOPICS = [
   { id: 'tuning', part: 4, name: 'Pitch, Frequency & Tuning (808s, kicks)' },
   { id: 'voicing', part: 4, name: 'Voicing, Voice Leading & Cadences' },
   { id: 'camelot', part: 4, name: 'Harmonic Mixing (Camelot Wheel)' },
-  { id: 'ear', part: 4, name: 'Ear Training (needs sound)' },
+  { id: 'earkey', part: 4, name: 'Ear Training: Notes in a Key' },
+  { id: 'ear', part: 4, name: 'Ear Training: Chords & Intervals' },
 ];
 const G = {};
 
@@ -1354,8 +1355,124 @@ G.progressions = [
   },
 ];
 
+// Voices a melody the way it's sung: each note moves to the nearest pitch from the last one
+// (unlike voice(), which always stacks upwards for chords and scales).
+function melodyVoice(names, start = 60) {
+  let prev = null;
+  return names.map(n => {
+    const p = pc(n); let m;
+    if (prev === null) m = start + ((p - start % 12 + 12) % 12);
+    else { let d = (((p - prev) % 12) + 12) % 12; if (d > 6) d -= 12; m = prev + d; }
+    if (m < LO) m += 12; if (m > HI) m -= 12;
+    prev = m; return { midi: m, label: n };
+  });
+}
+
+// =====================================================================
+//  EAR TRAINING IN A KEY (scale degrees, resolution, bass movement)
+// =====================================================================
+const DEG_LBL = { major: ['1 (home)', '2', '3', '4', '5', '6', '7'], minor: ['1 (home)', '2', '♭3', '4', '5', '♭6', '♭7'] };
+const degShort = (mode, i) => DEG_LBL[mode][i].split(' ')[0];
+const EAR_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'Bb'];
+const CAD_END = 3.0;
+// I – IV – V – I: fixes the key in the listener's ear before the question.
+function cadence(K, mode) {
+  const d = diatonic(K, mode), V = mode === 'minor' ? chordNotes(tr(K, 'P5'), 'maj') : d[4].notes;
+  const roots = [K, d[3].root, tr(K, 'P5'), K];
+  return [d[0].notes, d[3].notes, V, d[0].notes].map((n, i) => ({ t: i * 0.62, notes: [48 + pc(roots[i])].concat(mids(voice(n, 55))), d: i === 3 ? 0.95 : 0.58 }));
+}
+function degMidi(K, mode, i) { let base = 60 + pc(K); if (base > 66) base -= 12; return base + 12 * Math.floor(i / 7) + scaleSemis(mode)[((i % 7) + 7) % 7]; }
+const earKey = () => ({ K: R.pick(EAR_KEYS), mode: R.pick(['major', 'major', 'minor']) });
+G.earkey = [
+  () => { // name the degree
+    const { K, mode } = earKey(), i = R.int(0, 6), s = scaleNotes(K, mode), m = degMidi(K, mode, i);
+    return Q({
+      prompt: `🎧 Chords set the key (<b>${disp(K)} ${mode}</b>), then you hear <b>one note</b>. Which scale degree is it?`,
+      ...mc(DEG_LBL[mode][i], DEG_LBL[mode]), audio: cadence(K, mode).concat([{ t: CAD_END, notes: [m], d: 1.3 }]),
+      reveal: [{ midi: degMidi(K, mode, 0), label: K, sub: '1' }].concat(i ? [{ midi: m, label: s[i], sub: degShort(mode, i) }] : []),
+      explain: `It was <b>${disp(s[i])}</b>, degree ${degShort(mode, i)} of ${disp(K)} ${mode}. Sing the note, walk down the scale to the tonic, and count the steps. Degrees 1, 3 and 5 feel settled; 2 and 4 lean downwards; 7 pulls up to 1.`,
+    });
+  },
+  () => { // find it on the piano
+    const { K, mode } = earKey(), i = R.int(1, 6), s = scaleNotes(K, mode), m = degMidi(K, mode, i);
+    return PQ({
+      prompt: `🎧 The key is <b>${disp(K)} ${mode}</b> and the tonic ${disp(K)} is marked. After the chords you hear one note. <b>Find it</b> on the piano or your MIDI keyboard.`,
+      targetNotes: [s[i]], show: [{ midi: degMidi(K, mode, 0), label: K, sub: '1' }], audio: cadence(K, mode).concat([{ t: CAD_END, notes: [m], d: 1.3 }]),
+      explain: `It was <b>${disp(s[i])}</b>, degree ${degShort(mode, i)}. Finding notes by ear is exactly how you work out a melody or bass line from a track.`,
+    });
+  },
+  () => { // three-note melody
+    const { K, mode } = earKey(), s = scaleNotes(K, mode);
+    const pats = [[0, 1, 2], [2, 1, 0], [0, 2, 4], [4, 2, 0], [4, 3, 2], [2, 3, 4], [0, 1, 0], [4, 5, 4], [0, 4, 2], [2, 0, 4], [4, 4, 0], [0, 2, 1]];
+    const p = R.pick(pats), f = x => x.map(i => degShort(mode, i)).join(' – '), notes = p.map(i => degMidi(K, mode, i));
+    return Q({
+      prompt: `🎧 After the key-setting chords (<b>${disp(K)} ${mode}</b>) you hear a <b>3-note melody</b>. Which scale degrees is it?`, ...mc(f(p), pats.map(f)),
+      audio: cadence(K, mode).concat(notes.map((m, j) => ({ t: CAD_END + j * 0.55, notes: [m], d: 0.5 }))),
+      reveal: [...new Set(p)].map(i => ({ midi: degMidi(K, mode, i), label: s[i], sub: degShort(mode, i) })),
+      explain: `It was ${f(p)} = ${listFmt(p.map(i => s[i]))}. First decide: does it go up or down, by steps or by leaps? Then place the first note against the tonic.`,
+    });
+  },
+  () => { // does it end at home?
+    const { K, mode } = earKey(), s = scaleNotes(K, mode), end = R.pick([0, 0, 4, 2, 1]), body = R.pick([[4, 3, 2], [2, 3, 4], [4, 5, 4], [2, 4, 3], [0, 2, 4]]);
+    const seq = body.concat([end]), notes = seq.map(i => degMidi(K, mode, i));
+    const L = { 0: 'Yes: it lands on 1 (home)', 4: 'No: it stops on 5 (open, like a question)', 2: `No: it stops on ${degShort(mode, 2)} (calm, but not home)`, 1: 'No: it stops on 2 (unfinished)' };
+    return Q({
+      prompt: `🎧 After the chords (<b>${disp(K)} ${mode}</b>) you hear a short melody. Does it end at <b>home</b>, on the tonic?`, ...mc(L[end], Object.values(L)),
+      audio: cadence(K, mode).concat(notes.map((m, j) => ({ t: CAD_END + j * 0.5, notes: [m], d: j === 3 ? 1.1 : 0.45 }))),
+      reveal: [{ midi: degMidi(K, mode, 0), label: K, sub: '1' }].concat(end ? [{ midi: notes[3], label: s[end], sub: degShort(mode, end) }] : []),
+      explain: `The last note was <b>${disp(s[end])}</b> (degree ${degShort(mode, end)}). Ending on 1 sounds finished. Ending anywhere else leaves tension, which you can use on purpose: stop a build-up on an unfinished note and resolve it on the drop.`,
+    });
+  },
+  () => { // bass movement
+    const { K, mode } = earKey(), s = scaleNotes(K, mode), i = R.pick([2, 3, 4, 5, 6]), b0 = 36 + pc(K) + (pc(K) < 4 ? 12 : 0), b1 = b0 + scaleSemis(mode)[i];
+    return Q({
+      prompt: `🎧 After the chords (<b>${disp(K)} ${mode}</b>) the <b>bass</b> plays the tonic, then moves <b>up</b> to another note. Which degree does it move to?`,
+      ...mc(DEG_LBL[mode][i], [2, 3, 4, 5, 6].map(j => DEG_LBL[mode][j])),
+      audio: cadence(K, mode).concat([{ t: CAD_END, notes: [b0], d: 0.7 }, { t: CAD_END + 0.75, notes: [b1], d: 1.1 }]),
+      reveal: [{ midi: degMidi(K, mode, 0), label: K, sub: '1' }, { midi: degMidi(K, mode, i), label: s[i], sub: degShort(mode, i) }],
+      explain: `The bass moved 1 → ${degShort(mode, i)} (${disp(K)} → ${disp(s[i])}). Bass notes are usually chord roots, so hearing bass movement is the fastest way to work out a track's chords.`,
+    });
+  },
+];
+
+// =====================================================================
+//  RHYTHM ON A STEP SEQUENCER (answer type 'seq': program the pattern)
+// =====================================================================
+// target = { row: [0-based steps] }. Rows that aren't listed are not checked.
+function SQ(o) { return Object.assign({ type: 'seq', show: [], reveal: null, hideLabels: false, audio: null, explain: '' }, o); }
+const stepName = s => `beat ${Math.floor(s / 4) + 1}${['', ' "e"', ' "&"', ' "a"'][s % 4]}`;
+const SEQ_TASKS = [
+  ['Program a <b>four-on-the-floor kick</b>: a kick on every beat.', { kick: [0, 4, 8, 12] }, 'Beats 1, 2, 3, 4 are steps 1, 5, 9, 13. This steady pulse is the foundation of house and techno.'],
+  ['Add a <b>clap on the backbeat</b>: beats 2 and 4.', { clap: [4, 12] }, 'Beats 2 and 4 are steps 5 and 13. The backbeat is what makes people nod along.'],
+  ['Program <b>off-beat hi-hats</b>: one hat on the "&" of every beat.', { hat: [2, 6, 10, 14] }, 'The "&" falls halfway between beats: steps 3, 7, 11, 15. It\'s the classic house hat.'],
+  ['Build a <b>basic house beat</b>: kick on every beat, clap on 2 and 4, hat on every "&".', { kick: [0, 4, 8, 12], clap: [4, 12], hat: [2, 6, 10, 14] }, 'Kick 1-5-9-13, clap 5-13, hats 3-7-11-15. Most house tracks start from exactly this.'],
+  ['Make a <b>half-time</b> groove: kick on beat 1 only, clap on beat 3 only, hats on every 8th note.', { kick: [0], clap: [8], hat: [0, 2, 4, 6, 8, 10, 12, 14] }, 'With the snare/clap on beat 3 instead of 2 and 4, the bar feels half as fast. That\'s the dubstep and trap feel.'],
+  ['Program straight <b>8th-note hi-hats</b>: two per beat.', { hat: [0, 2, 4, 6, 8, 10, 12, 14] }, '8th notes land on every beat and every "&": the odd-numbered steps.'],
+  ['Program a <b>"boots and cats"</b> beat: kick on beats 1 and 3, clap on beats 2 and 4.', { kick: [0, 8], clap: [4, 12] }, 'Kick 1 and 9, clap 5 and 13: the basic rock/pop backbone.'],
+  ['Program a <b>syncopated kick</b>: beat 1, and the "&" of beat 3. Then clap on 2 and 4.', { kick: [0, 10], clap: [4, 12] }, 'The kick on the "&" of 3 (step 11) lands off the beat. That push is what makes breakbeats and garage feel bouncy.'],
+  ['Program the <b>3-3-2 "tresillo"</b> kick: hits on steps 1, 4 and 7 in each half of the bar (so 1, 4, 7, 9, 12, 15).', { kick: [0, 3, 6, 8, 11, 14] }, 'Groups of 3 + 3 + 2 sixteenths against a 4/4 pulse. You hear it in reggaeton, dancehall, and lots of melodic house bass lines.'],
+  ['Program <b>16th-note hi-hats</b> on every step, with a kick on beats 1 and 3.', { hat: range(0, 15), kick: [0, 8] }, 'All 16 steps is a constant 16th-note stream, typical of techno and trap hats.'],
+];
+G.rhythm.push(
+  () => { const t = R.pick(SEQ_TASKS); return SQ({ prompt: `${t[0]}`, target: t[1], explain: t[2] }); },
+  () => {
+    const row = R.pick(['kick', 'clap', 'hat']), steps = R.sample(range(0, 15), R.int(2, 3)).sort((a, b) => a - b);
+    return SQ({
+      prompt: `Place a <b>${row}</b> on exactly these positions: <b>${steps.map(stepName).join(', ')}</b>.`, target: { [row]: steps },
+      explain: `Count each beat as "1 e & a": the beat itself, then "e", "&", "a". Those positions are steps ${steps.map(s => s + 1).join(', ')}.`,
+    });
+  },
+  () => {
+    const pos = R.int(1, 3), row = R.pick(['hat', 'clap']), steps = [0, 4, 8, 12].map(b => b + pos), name = ['', '"e"', '"&"', '"a"'][pos];
+    return SQ({
+      prompt: `Put a <b>kick</b> on every beat, and a <b>${row}</b> on the <b>${name}</b> of every beat.`, target: { kick: [0, 4, 8, 12], [row]: steps },
+      explain: `The ${name} of each beat is ${pos} step${pos > 1 ? 's' : ''} after it: steps ${steps.map(s => s + 1).join(', ')}.`,
+    });
+  },
+);
+
 function makeQuestion(topicId) {
   const q = R.pick(G[topicId])(); q.topic = topicId; return q;
 }
 
-if (typeof module !== 'undefined') module.exports = { G, TOPICS, makeQuestion, scaleNotes, diatonic, chordNotes, tr, keySig, voice, parseRoman, PROG_LIB, chordSym, isDiatonicRoman };
+if (typeof module !== 'undefined') module.exports = { melodyVoice, G, TOPICS, makeQuestion, scaleNotes, diatonic, chordNotes, tr, keySig, voice, parseRoman, PROG_LIB, chordSym, isDiatonicRoman };

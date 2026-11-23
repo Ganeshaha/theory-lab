@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Theory Lab: Music Theory for Producers</title>
+<meta name="theme-color" content="#12151c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -83,6 +87,8 @@
           <label class="field-inline">Daily goal
             <select id="goalSel"><option value="10">10 answers</option><option value="15">15 answers</option><option value="25">25 answers</option><option value="40">40 answers</option></select>
           </label>
+          <button id="midiBtn2" class="sm midi-btn">🎹 Connect MIDI keyboard</button>
+          <button id="installBtn" class="sm hidden">⤓ Install as an app</button>
         </div>
       </div>
 
@@ -115,10 +121,20 @@
               <button id="replayBtn" class="play-btn hidden">▶ Play sound <kbd>R</kbd></button>
               <div id="qOpts"></div>
               <div id="qPianoCtl" class="pianoctl hidden">
-                <span>🎹 Click keys on the piano to select them.</span>
+                <span id="pianoHint">🎹 Click keys on the piano to select them.</span>
                 <span class="grow"></span>
                 <button id="pClear">Clear</button>
                 <button id="pSubmit" class="primary">Submit <kbd>Enter</kbd></button>
+              </div>
+              <div id="qSeq" class="seqwrap hidden">
+                <div class="seq" id="seqGrid"></div>
+                <div class="pianoctl">
+                  <button id="seqPlay">▶ Play</button>
+                  <span>Click steps to switch them on. Count "1 e &amp; a".</span>
+                  <span class="grow"></span>
+                  <button id="seqClear">Clear</button>
+                  <button id="seqSubmit" class="primary">Submit <kbd>Enter</kbd></button>
+                </div>
               </div>
               <div class="learnrow" id="learnRow">
                 <button id="hintBtn" class="sm">💡 Hint <kbd>H</kbd></button>
@@ -203,6 +219,18 @@
             <div class="cr-label">Colour chords <span class="muted small">(borrowed &amp; secondary, used for emotion)</span></div>
             <div class="pads" id="crColor"></div>
 
+            <div class="challenge" id="crChal">
+              <div class="ch-row">
+                <b>🎧 Rebuild by ear</b>
+                <select id="chLevel" aria-label="Challenge level"><option value="1">Easy: the 4 main chords</option><option value="2">Medium: any chord in the key</option><option value="3">Hard: with a colour chord</option></select>
+                <button id="chNew" class="primary sm">New challenge</button>
+                <button id="chHear" class="sm hidden">▶ Hear target</button>
+                <button id="chCheck" class="sm hidden">✓ Check</button>
+                <button id="chReveal" class="ghost sm hidden">Reveal</button>
+              </div>
+              <div id="chMsg">Hear a hidden loop, then rebuild it with the pads. It trains the skill of working out chords from tracks.</div>
+            </div>
+
             <div class="cr-label">Your loop <span class="muted small">(1 bar each · click a chord to remove · up to 8)</span></div>
             <div class="slots" id="crSlots"></div>
 
@@ -215,6 +243,15 @@
               <span class="grow"></span>
               <button id="crExport">⤓ Export MIDI</button>
             </div>
+            <div class="cr-label">Melody <span class="muted small">(click the grid · rows are the notes of your key · brighter cells are chord tones)</span></div>
+            <div class="btnrow mel-ctl">
+              <label class="switch"><input type="checkbox" id="melOn" checked><span></span> Play melody</label>
+              <label class="field-inline">Note <select id="melLen"><option value="1">1/8</option><option value="2" selected>1/4</option><option value="4">1/2</option><option value="8">1 bar</option></select></label>
+              <button id="melGen">🎲 Melody idea</button>
+              <button id="melClear" class="ghost">Clear melody</button>
+              <span id="melStat" class="muted small"></span>
+            </div>
+            <div id="crMel" class="mel"></div>
             <div id="crTips" class="crtips"></div>
           </div>
 
@@ -314,6 +351,7 @@
           <option value="off">Hidden</option>
         </select>
       </label>
+      <button id="midiBtn" class="ghost sm midi-btn" title="Connect a MIDI keyboard">🎹 MIDI</button>
       <button id="dockToggle" class="ghost sm" aria-expanded="true" title="Show or hide the piano">▾ Hide</button>
     </div>
     <div class="dock-scroll" id="dockScroll">
@@ -328,7 +366,9 @@
 <script src="coach.js"></script>
 <script src="course.js"></script>
 <script src="app.js"></script>
+<script src="seq.js"></script>
 <script src="create.js"></script>
 <script src="learn.js"></script>
+<script src="midi.js"></script>
 </body>
 </html>

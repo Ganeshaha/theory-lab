@@ -141,6 +141,7 @@ function updateDockVisibility() {
 }
 function showTab(name) {
   TAB = name;
+  if (typeof seqStop === 'function') seqStop();
   $$('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
   $$('.tabpane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   updateDockVisibility();
@@ -295,8 +296,8 @@ function playDemo(id) {
     const vs = d.seq.map(g => voice(g)); Snd.play(EV.seq(vs.map(mids), 0, 1.0));
     vs.forEach((v, i) => setTimeout(() => { if (!S.inLesson && !S.peek) return; quizPiano.clear(); quizPiano.mark(v, 'ans'); }, i * 1000));
   } else {
-    const v = voice(d.arp || d.chord); quizPiano.mark(v, 'ans');
-    Snd.play(d.arp ? EV.arp(mids(v), 0, 0.25, 0.4) : EV.chord(mids(v)));
+    const v = d.mel ? melodyVoice(d.mel) : voice(d.arp || d.chord); quizPiano.mark(v, 'ans');
+    Snd.play(d.chord ? EV.chord(mids(v)) : EV.arp(mids(v), 0, d.mel ? 0.32 : 0.25, 0.4));
   }
 }
 function showLesson(id, cb) {
@@ -304,7 +305,7 @@ function showLesson(id, cb) {
   $('#qProg').textContent = 'Mini-lesson'; $('#qTopic').textContent = topicName(id); $('#qRetry').classList.add('hidden');
   $('#lessonPeek').classList.add('hidden');
   $('#qPrompt').innerHTML = lessonHTML(id, 'New topic');
-  ['#replayBtn', '#qFeedback', '#qPianoCtl', '#learnRow'].forEach(s => $(s).classList.add('hidden'));
+  seqStop(); ['#replayBtn', '#qFeedback', '#qPianoCtl', '#learnRow', '#qSeq'].forEach(s => $(s).classList.add('hidden'));
   const o = $('#qOpts'); o.classList.remove('hidden');
   o.innerHTML = `<div class="lesson-actions">${LESSONS[id].demo ? '<button id="demoBtn">▶ Hear it</button>' : ''}<button id="lessonGo" class="primary">Got it, try a question <kbd>Enter</kbd></button><button id="fullLesson" class="ghost">📖 Read the full lesson</button></div>`;
   quizPiano.clear(); quizPiano.selectable = false; quizDockNote();
@@ -372,9 +373,12 @@ function renderQuestion(pick) {
       const b = document.createElement('button'); b.innerHTML = `<span class="n">${i + 1}</span><span>${o}</span><span class="ic"></span>`;
       b.onclick = () => answerMC(i); opts.appendChild(b);
     });
+  } else if (q.type === 'seq') {
+    quizPiano.selectable = false; $('#qPianoCtl').classList.add('hidden'); opts.classList.add('hidden'); seqRender();
   } else {
     quizPiano.selectable = true; $('#qPianoCtl').classList.remove('hidden'); opts.classList.add('hidden');
   }
+  $('#qSeq').classList.toggle('hidden', q.type !== 'seq'); if (q.type !== 'seq') seqStop();
   quizDockNote(); Tools.onQuestion(q); checkBreak();
   $$('#toolbar button[data-tool]').forEach(b => { const on = TOOL_HINT[q.topic] === b.dataset.tool && !TOOLS[b.dataset.tool]; b.classList.toggle('suggest', on); b.title = on ? 'Handy for this question' : ''; });
   $('#main').scrollTop = 0;
@@ -434,6 +438,7 @@ function submitPiano() {
 function hint() {
   if (S.answered || !S.learn || !S.q) return;
   const q = S.q;
+  if (q.type === 'seq') return seqHint();
   if (q.type === 'mc') {
     const cands = $$('#qOpts button').map((b, j) => ({ b, j })).filter(x => x.j !== q.answer && !x.b.disabled);
     if (cands.length <= 1) return tryMsg('No more hints. It\'s one of the two left!', true);
@@ -451,6 +456,7 @@ function showAnswer() {
   if (S.answered || !S.q) return;
   const q = S.q; S.tries++;
   if (q.type === 'mc') return finalizeMC(-1, 'revealed');
+  if (q.type === 'seq') return finalizeSeq('revealed');
   S.answered = true; $('#qPianoCtl').classList.add('hidden'); quizPiano.selectable = false;
   pianoResult([...quizPiano.selected].filter(m => q.target.has(m % 12)));
   conclude('revealed', listFmt(q.reveal.map(x => x.label)));
@@ -482,7 +488,7 @@ function conclude(result, answerText, extra = '') {
 }
 
 function finish() {
-  Tools.stop(); S.inLesson = null;
+  Tools.stop(); seqStop(); S.inLesson = null;
   $('#play').classList.add('hidden'); quizPiano.clear(); quizPiano.setHidden(false); quizPiano.selectable = false; S.q = null;
   const n = S.hist.length, pct = n ? Math.round(S.score / n * 100) : 0, mins = Math.max(1, Math.round((Date.now() - S.start) / 60000));
   const by = {}; S.hist.forEach(h => { const b = by[h.topic] || (by[h.topic] = { c: 0, t: 0 }); b.t++; if (h.ok) b.c++; });
@@ -561,7 +567,8 @@ document.addEventListener('keydown', e => {
   if (S.inLesson) { if (k === 'enter') { e.preventDefault(); lessonDone(); } return; }
   if (!S.q) return;
   if (/^[1-6]$/.test(k) && S.q.type === 'mc' && !S.answered) { const i = +k - 1, b = $$('#qOpts button')[i]; if (b && !b.disabled) answerMC(i); }
-  else if (k === 'enter') { e.preventDefault(); if (S.answered) advance(); else if (S.q.type === 'piano') submitPiano(); }
+  else if (k === 'enter') { e.preventDefault(); if (S.answered) advance(); else if (S.q.type === 'piano') submitPiano(); else if (S.q.type === 'seq') submitSeq(); }
+  else if (k === ' ' && S.q.type === 'seq') { e.preventDefault(); seqPlay(); }
   else if (k === 'r') Snd.play(S.q.audio);
   else if (k === 'h') hint();
   else if (k === 'l') toggleLessonPeek();
@@ -817,7 +824,7 @@ class PianoRoll {
   }
   load(q, answered, manual) {
     let evs = null;
-    if (q.topic === 'ear' && !answered) { this.notes = []; this.render(); if (manual) this.msg('Ear-training question: answer first (loading the notes would give it away).'); return; }
+    if (/^ear/.test(q.topic) && !answered) { this.notes = []; this.render(); if (manual) this.msg('Ear-training question: answer first (loading the notes would give it away).'); return; }
     if (q.audio) evs = q.audio;
     else { const src = answered ? (q.reveal || q.show) : q.show; if (src && src.length) evs = [{ t: 0, notes: mids(src), d: 1 }]; }
     this.notes = [];
@@ -956,3 +963,14 @@ $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = fal
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
 showTab('quiz');
+
+// =====================================================================
+//  INSTALLABLE APP (PWA): offline support on the hosted site
+// =====================================================================
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => { });
+}
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installBtn').classList.remove('hidden'); });
+$('#installBtn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#installBtn').classList.add('hidden'); };
+window.addEventListener('appinstalled', () => $('#installBtn').classList.add('hidden'));
