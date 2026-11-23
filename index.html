@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theory Lab: Music Theory for Producers</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="logo">♪</span> Theory Lab</div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="quiz" role="tab">Practice</button>
+      <button class="tab" data-tab="create" role="tab">Create</button>
+      <button class="tab" data-tab="explore" role="tab">Explorer</button>
+      <button class="tab" data-tab="stats" role="tab">Progress</button>
+    </nav>
+    <label class="lblmode" title="How black keys are labelled on the piano">
+      <span>Key labels</span>
+      <select id="labelMode">
+        <option value="both">C♯ / D♭</option>
+        <option value="sharp">Sharps</option>
+        <option value="flat">Flats</option>
+        <option value="off">Hidden</option>
+      </select>
+    </label>
+  </header>
+
+  <main id="main">
+    <!-- ================= PRACTICE ================= -->
+    <section id="tab-quiz" class="tabpane active">
+      <!-- setup -->
+      <div id="setup" class="wrap">
+        <!-- Home: one obvious way to start -->
+        <div class="hero panel">
+          <div class="hero-main">
+            <div class="kicker" id="heroKicker">Today</div>
+            <h1 id="heroTitle">Ready when you are</h1>
+            <div id="heroPlan" class="heroplan"></div>
+            <div class="btnrow hero-cta">
+              <button id="dailyBtn" class="primary xl">▶ Start 5-minute practice</button>
+              <span class="muted small">10 questions · retry freely · stop anytime</span>
+            </div>
+          </div>
+          <div class="hero-side">
+            <div class="ringstat"><div class="ring sm" id="lvlRing"><div id="lvlNum"></div></div><div><div class="k">Level</div><div class="v small" id="lvlText"></div></div></div>
+            <div class="ringstat"><div class="ring sm" id="goalRing"><div id="goalNum"></div></div><div><div class="k">Today</div><div class="v small" id="goalText"></div></div></div>
+            <div><div class="k">This week</div><div class="weekdots" id="weekDots"></div><div class="muted small" id="daysTotal"></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="path-head">
+            <div><div class="panel-title">Your path</div><p class="muted small">Follows the course order. Click any topic for a focused 8-question session (with a mini-lesson if it's new).</p></div>
+            <div class="path-legend"><span><i class="st-new"></i>New</span><span><i class="st-due"></i>Review due</span><span><i class="st-learning"></i>Learning</span><span><i class="st-strong"></i>Strong</span></div>
+          </div>
+          <div id="path" class="path"></div>
+        </div>
+
+        <details class="panel custom" id="customBox">
+          <summary><span>Custom session</span> <span class="muted small">pick your own topics, length and options</span></summary>
+        <div class="presets" id="presets">
+          <span class="muted small">Quick pick:</span>
+          <button data-preset="all">Everything</button>
+          <button data-preset="1">Part 1</button>
+          <button data-preset="2">Part 2</button>
+          <button data-preset="3">Part 3</button>
+          <button data-preset="4">Producer toolkit</button>
+          <button data-preset="weak">My 5 weakest</button>
+          <button data-preset="none" class="ghost">Clear</button>
+        </div>
+
+        <div id="topicGroups" class="parts"></div>
+
+        <div class="startbar">
+          <div class="startbar-info"><b id="selCount">0</b> topics selected</div>
+          <div class="seg" id="qCount" role="radiogroup" aria-label="Number of questions">
+            <button data-n="10">10</button><button data-n="20" class="active">20</button><button data-n="30">30</button><button data-n="0">∞</button>
+          </div>
+          <label class="switch" title="Wrong answers let you try again; hints and 'show answer' available. Stats count first tries only."><input type="checkbox" id="learnMode" checked><span></span> Learning mode</label>
+          <label class="switch"><input type="checkbox" id="autoPlay" checked><span></span> Auto-play sound</label>
+          <label class="switch"><input type="checkbox" id="weakFirst"><span></span> Favour weak topics</label>
+          <button id="startBtn" class="primary lg">Start ▸</button>
+        </div>
+        </details>
+
+        <div class="settings-row">
+          <label class="switch"><input type="checkbox" id="sfx" checked><span></span> Reward sounds</label>
+          <label class="field-inline">Daily goal
+            <select id="goalSel"><option value="10">10 answers</option><option value="15">15 answers</option><option value="25">25 answers</option><option value="40">40 answers</option></select>
+          </label>
+        </div>
+      </div>
+
+      <!-- play -->
+      <div id="play" class="wrap play hidden">
+        <div class="toolbar" id="toolbar" role="toolbar" aria-label="Learning tools">
+          <span class="toolbar-label">Tools</span>
+          <button data-tool="piano" aria-pressed="false">🎹 Piano</button>
+          <button data-tool="roll" aria-pressed="false">▦ Piano roll</button>
+          <button data-tool="circle" aria-pressed="false">◎ Circle &amp; keys</button>
+          <button data-tool="finder" aria-pressed="false">🔍 Chord finder</button>
+          <button data-tool="tempo" aria-pressed="false">⏱ Tempo</button>
+          <button data-tool="cheat" aria-pressed="false">📋 Cheat sheet</button>
+          <span class="grow"></span>
+          <button id="focusBtn" data-focus aria-pressed="false" title="Hide everything except the question (F)">🎯 Focus <kbd>F</kbd></button>
+        </div>
+        <div id="breakBanner" class="breakbar hidden" role="status"></div>
+
+        <div class="play-layout">
+          <div class="play-main">
+            <div class="qbar">
+              <div class="qbar-left"><span id="qProg"></span><span id="qTopic" class="chip"></span><span id="qRetry" class="chip warn hidden">Review</span></div>
+              <div class="qbar-right"><span id="qScore" class="score"></span><button id="endBtn" class="ghost sm">End</button></div>
+            </div>
+            <div class="progress"><div id="qBar"></div></div>
+
+            <div class="qcard">
+              <div id="lessonPeek" class="lesson-peek hidden"></div>
+              <div id="qPrompt"></div>
+              <button id="replayBtn" class="play-btn hidden">▶ Play sound <kbd>R</kbd></button>
+              <div id="qOpts"></div>
+              <div id="qPianoCtl" class="pianoctl hidden">
+                <span>🎹 Click keys on the piano to select them.</span>
+                <span class="grow"></span>
+                <button id="pClear">Clear</button>
+                <button id="pSubmit" class="primary">Submit <kbd>Enter</kbd></button>
+              </div>
+              <div class="learnrow" id="learnRow">
+                <button id="hintBtn" class="sm">💡 Hint <kbd>H</kbd></button>
+                <button id="lessonBtn" class="ghost sm" title="Re-read the 30-second lesson for this topic (L)">📖 Lesson</button>
+                <button id="showBtn" class="ghost sm">Show answer</button>
+                <span id="tryMsg" class="trymsg" aria-live="polite"></span>
+              </div>
+            </div>
+
+            <div id="qFeedback" class="feedback hidden" aria-live="polite">
+              <div class="fb-head"><span id="fbTitle"></span><button id="nextBtn" class="primary">Next <kbd>Enter</kbd></button></div>
+              <div id="fbBody"></div>
+            </div>
+
+            <div class="tool panel hidden" id="tool-roll">
+              <div class="tool-head"><span>▦ Piano roll</span><button class="ghost sm" data-close="roll" aria-label="Close piano roll">✕</button></div>
+              <div id="pianoRoll"></div>
+            </div>
+          </div>
+
+          <aside class="tools-col" id="toolsCol">
+            <div class="tool panel hidden" id="tool-circle">
+              <div class="tool-head"><span>◎ Circle of fifths &amp; keys</span><button class="ghost sm" data-close="circle" aria-label="Close">✕</button></div>
+              <div id="tkCircle"></div>
+              <div id="tkInfo"></div>
+            </div>
+            <div class="tool panel hidden" id="tool-finder">
+              <div class="tool-head"><span>🔍 Chord finder</span><button class="ghost sm" data-close="finder" aria-label="Close">✕</button></div>
+              <p class="muted small">Toggle notes to name the chord or interval.</p>
+              <div class="pcgrid" id="cfGrid"></div>
+              <div id="cfOut" class="cfout"></div>
+            </div>
+            <div class="tool panel hidden" id="tool-tempo">
+              <div class="tool-head"><span>⏱ Tempo &amp; delay</span><button class="ghost sm" data-close="tempo" aria-label="Close">✕</button></div>
+              <label class="field"><span class="field-label">BPM</span><input type="number" id="tBpm" value="128" min="20" max="400"></label>
+              <div id="tBpmOut" class="tiles compact"></div>
+              <div id="tBpmExtra" class="muted small"></div>
+            </div>
+            <div class="tool panel hidden" id="tool-cheat">
+              <div class="tool-head"><span>📋 Cheat sheet</span><button class="ghost sm" data-close="cheat" aria-label="Close">✕</button></div>
+              <div class="seg" id="csTabs"><button data-cs="int" class="active">Intervals</button><button data-cs="chord">Chords</button><button data-cs="scale">Scales</button><button data-cs="key">Keys</button></div>
+              <div id="csBody" class="csbody"></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div id="summary" class="wrap narrow hidden"></div>
+    </section>
+
+    <!-- ================= CREATE ================= -->
+    <section id="tab-create" class="tabpane">
+      <div class="wrap">
+        <div class="page-head">
+          <div><h1>Create</h1><p class="muted">Build a chord loop, hear it with bass and drums, then export MIDI straight into your DAW.</p></div>
+        </div>
+        <div class="create-grid">
+          <div class="panel">
+            <div class="field-row cr-key">
+              <label class="field"><span class="field-label">Key</span><select id="crRoot"></select></label>
+              <div class="field"><span class="field-label">Mode</span><div class="seg" id="crMode"><button data-m="major" class="active">Major</button><button data-m="minor">Minor</button></div></div>
+              <label class="switch"><input type="checkbox" id="crSev"><span></span> 7th chords</label>
+              <label class="field"><span class="field-label">BPM</span><input type="number" id="crBpm" value="124" min="60" max="200"></label>
+            </div>
+
+            <div class="cr-label">Chords in this key <span class="muted small">(click to add)</span></div>
+            <div class="pads" id="crPads"></div>
+            <div class="cr-label">Colour chords <span class="muted small">(borrowed &amp; secondary, used for emotion)</span></div>
+            <div class="pads" id="crColor"></div>
+
+            <div class="cr-label">Your loop <span class="muted small">(1 bar each · click a chord to remove · up to 8)</span></div>
+            <div class="slots" id="crSlots"></div>
+
+            <div class="btnrow cr-transport">
+              <button id="crPlay" class="primary lg">▶ Play</button>
+              <button id="crInspire">🎲 Inspire me</button>
+              <button id="crSpice" title="Apply a real technique to your loop and explain it">✨ Spice it</button>
+              <button id="crUndo" class="ghost" title="Undo">↶ Undo</button>
+              <button id="crClear" class="ghost">Clear</button>
+              <span class="grow"></span>
+              <button id="crExport">⤓ Export MIDI</button>
+            </div>
+            <div id="crTips" class="crtips"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Sound</div>
+            <div class="cr-sound">
+              <label class="field"><span class="field-label">Chord sound</span><select id="crTimbre"><option value="pad">Pad</option><option value="keys">Keys</option><option value="pluck">Pluck</option></select></label>
+              <label class="field"><span class="field-label">Chord rhythm</span><select id="crRhythm"><option value="sustain">Sustained</option><option value="stabs">House stabs (off-beat)</option><option value="pulse">8th-note pulse</option><option value="sync">Syncopated</option><option value="arp">Arpeggio (1/16)</option></select></label>
+              <label class="field"><span class="field-label">Bass</span><select id="crBass"><option value="root">Root notes</option><option value="offbeat">Off-beat (house)</option><option value="eighths">Driving 8ths</option><option value="off">Off</option></select></label>
+              <label class="switch"><input type="checkbox" id="crDrums" checked><span></span> Drums</label>
+              <label class="switch" title="Pick the inversion of each chord that moves the least, so it sounds smoother"><input type="checkbox" id="crLead" checked><span></span> Smooth voice leading</label>
+            </div>
+            <div class="panel-title" style="margin-top:18px">Starter progressions</div>
+            <p class="muted small">Click one to load it into your key, then change a chord and hear what happens.</p>
+            <div id="crLib" class="lib"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= EXPLORER ================= -->
+    <section id="tab-explore" class="tabpane">
+      <div class="wrap">
+        <div class="explore-grid">
+          <div class="panel">
+            <div class="seg big" id="exView">
+              <button data-v="key" class="active">Key &amp; chords</button>
+              <button data-v="scale">Scale / mode</button>
+              <button data-v="chord">Chord</button>
+            </div>
+
+            <div class="field">
+              <div class="field-label">Root <span class="seg tiny" id="exSpell"><button data-s="sharp" class="active">♯</button><button data-s="flat">♭</button></span></div>
+              <div class="rootstrip" id="exRoots"></div>
+            </div>
+
+            <div class="field-row" id="exKeyCtl">
+              <label class="field"><span class="field-label">Key type</span><select id="exKeyType"></select></label>
+              <label class="switch"><input type="checkbox" id="exSevenths"><span></span> 7th chords</label>
+            </div>
+            <div class="field-row hidden" id="exScaleCtl">
+              <label class="field"><span class="field-label">Scale</span><select id="exScale"></select></label>
+            </div>
+            <div class="field-row hidden" id="exChordCtl">
+              <label class="field"><span class="field-label">Chord</span><select id="exChord"></select></label>
+              <label class="field"><span class="field-label">Inversion</span><select id="exInv"></select></label>
+            </div>
+
+            <div id="exInfo" class="exinfo"></div>
+            <div class="btnrow">
+              <button id="exPlay" class="primary">▶ Play</button>
+              <button id="exArp">Arpeggiate</button>
+            </div>
+            <div id="exDiatonic"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Circle of fifths</div>
+            <p class="muted small">Click a key. Outer ring = major, inner = relative minor. Neighbours are highlighted: they're the safest keys to borrow chords from or modulate to.</p>
+            <div id="circle"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Tempo &amp; delay calculator</div>
+          <div class="bpm-row">
+            <label class="field"><span class="field-label">BPM</span><input type="number" id="bpmIn" value="128" min="20" max="400"></label>
+            <div id="bpmExtra" class="muted small"></div>
+          </div>
+          <div id="bpmOut" class="tiles"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PROGRESS ================= -->
+    <section id="tab-stats" class="tabpane">
+      <div class="wrap">
+        <div class="page-head">
+          <div><h1>Progress</h1><p class="muted">Saved in this browser. Aim for 80%+ on every topic, then keep revisiting with mixed sessions.</p></div>
+          <div class="btnrow"><button id="practiseWeak" class="primary">Practise weakest 5 ▸</button><button id="resetStats" class="ghost">Reset</button></div>
+        </div>
+        <div id="statsBody"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="dock" id="dock">
+    <div class="dock-head">
+      <span id="dockNote" class="muted small"></span>
+      <span class="legend" id="legend"></span>
+    </div>
+    <div class="dock-scroll" id="dockScroll">
+      <div id="quizPiano"></div>
+      <div id="explorePiano" class="hidden"></div>
+    </div>
+  </footer>
+</div>
+
+<script src="theory.js"></script>
+<script src="lessons.js"></script>
+<script src="coach.js"></script>
+<script src="app.js"></script>
+<script src="create.js"></script>
+</body>
+</html>
