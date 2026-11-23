@@ -556,7 +556,7 @@ function renderHome() {
 }
 
 // ---- focus mode ----
-function setFocus(on) { document.body.classList.toggle('focus', on); $('#focusBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); store.set('focus', on); }
+function setFocus(on) { document.body.classList.toggle('focus', on); $('#focusBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); store.set('focus', on); if (typeof layoutTools === 'function') layoutTools(); }
 $('#focusBtn').onclick = () => setFocus(!document.body.classList.contains('focus'));
 
 document.addEventListener('keydown', e => {
@@ -937,7 +937,7 @@ function renderCheat() {
     <p><b>Cadences:</b> V→I authentic · IV→I plagal · →V half · V→vi deceptive.</p>`;
   $('#csBody').innerHTML = h;
 }
-$$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; renderCheat(); });
+$$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; renderCheat(); layoutTools('cheat'); });
 
 // ---- tool registry / toggles ----
 const roll = new PianoRoll($('#pianoRoll'));
@@ -946,19 +946,90 @@ const Tools = {
   onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); },
   stop() { roll.stop(); },
 };
-function applyTools() {
-  $$('#toolbar button').forEach(b => b.setAttribute('aria-pressed', TOOLS[b.dataset.tool] ? 'true' : 'false'));
-  ['roll', 'circle', 'finder', 'tempo', 'cheat'].forEach(k => $('#tool-' + k).classList.toggle('hidden', !TOOLS[k]));
-  $('#play').classList.toggle('with-side', ['circle', 'finder', 'tempo', 'cheat'].some(k => TOOLS[k]));
-  if (!TOOLS.roll) roll.stop();
-  updateDockVisibility(); store.set('tools', TOOLS);
+// Side tools sit in a sticky column beside the question. Each panel collapses to its title bar;
+// when the open ones don't fit, the least recently used collapse automatically (AUTO) and come
+// back when there's room. Very wide screens get a second column instead.
+const SIDE = ['circle', 'finder', 'tempo', 'cheat'], ALLT = ['roll', ...SIDE];
+const TSTATE = Object.assign({ coll: {}, used: [] }, store.get('toolState', {})), AUTO = {};
+const toolEl = k => $('#tool-' + k);
+const touchTool = k => { const u = TSTATE.used, i = u.indexOf(k); if (i >= 0) u.splice(i, 1); u.push(k); };
+function toolSummary(k) {
+  if (k === 'circle') return `${disp(TK.root)} ${TK.type}`;
+  if (k === 'finder') { const b = $('#cfOut .big'); return b ? b.textContent : 'no notes picked'; }
+  if (k === 'tempo') return `${$('#tBpm').value} BPM`;
+  if (k === 'cheat') return $('#csTabs button.active').textContent;
+  return roll.notes.length ? `${roll.notes.length} note${roll.notes.length > 1 ? 's' : ''}` : 'empty';
 }
-$$('#toolbar button').forEach(b => b.onclick = () => {
-  const k = b.dataset.tool; TOOLS[k] = !TOOLS[k]; applyTools();
-  if (k === 'roll' && TOOLS.roll && S.q) roll.load(S.q, S.answered);
-  if (TOOLS[k] && k !== 'piano') { const el = $('#tool-' + k); requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
+function toggleTool(k) {
+  const c = !toolEl(k).classList.contains('collapsed'); TSTATE.coll[k] = c; AUTO[k] = false;
+  if (!c) touchTool(k);
+  layoutTools(c ? null : k);
+}
+ALLT.forEach(k => {
+  const el = toolEl(k), head = el.querySelector('.tool-head'), span = head.querySelector('span'), body = document.createElement('div');
+  body.className = 'tool-body'; [...el.children].filter(c => c !== head).forEach(c => body.appendChild(c)); el.appendChild(body);
+  const t = document.createElement('button'); t.className = 'tool-title'; t.title = 'Collapse or expand';
+  t.innerHTML = `<span>${span.innerHTML}</span><span class="tool-sum"></span>`; span.replaceWith(t);
+  t.onclick = () => toggleTool(k);
+  body.addEventListener('pointerdown', () => touchTool(k), true);
 });
+function layoutTools(keep) {
+  const play = $('#play'), main = $('#main'), A = $('#tcolA'), B = $('#tcolB'), open = SIDE.filter(k => TOOLS[k]);
+  const visible = !play.classList.contains('hidden') && !document.body.classList.contains('focus') && TAB === 'quiz';
+  document.body.classList.toggle('tools-side', visible && open.length > 0 && window.innerWidth >= 900);
+  if (visible && open.length) {
+    const stacked = window.innerWidth < 900, GAP = 12;
+    const avail = Math.max(120, main.clientHeight - $('#toolbar').offsetHeight - parseFloat(getComputedStyle(play).paddingTop) - 36);
+    play.style.setProperty('--side-h', avail + 'px'); play.style.setProperty('--tb-h', $('#toolbar').offsetHeight + 'px');
+    play.classList.remove('two'); SIDE.forEach(k => { A.appendChild(toolEl(k)); toolEl(k).classList.remove('collapsed'); toolEl(k).querySelector('.tool-body').style.maxHeight = ''; });
+    const first = toolEl(open[0]); first.classList.add('collapsed'); const HEAD = first.offsetHeight; first.classList.remove('collapsed');
+    const H = {}; open.forEach(k => { H[k] = toolEl(k).offsetHeight; AUTO[k] = false; });
+    const h = k => TSTATE.coll[k] ? HEAD : H[k], sum = ks => ks.reduce((a, k) => a + h(k), 0) + GAP * Math.max(0, ks.length - 1);
+    let cols = [open];
+    if (!stacked && window.innerWidth >= 1760 && open.length > 1 && sum(open) > avail) {
+      let best = null;
+      for (let mask = 1; mask < (1 << open.length) - 1; mask++) {
+        const a = open.filter((_, i) => !(mask >> i & 1)), b = open.filter((_, i) => mask >> i & 1), score = Math.max(sum(a), sum(b));
+        if (!best || score < best.score) best = { a, b, score };
+      }
+      cols = [best.a, best.b]; play.classList.add('two'); best.b.forEach(k => B.appendChild(toolEl(k)));
+    }
+    const rank = k => TSTATE.used.indexOf(k), expanded = open.filter(k => !TSTATE.coll[k]);
+    if (!keep || !expanded.includes(keep)) keep = expanded.slice().sort((x, y) => rank(y) - rank(x))[0];
+    for (const c of cols) {
+      const lru = c.filter(k => !TSTATE.coll[k] && k !== keep).sort((x, y) => rank(x) - rank(y));
+      let total = sum(c); const limit = stacked ? 0 : avail;
+      while (total > limit && lru.length) { const k = lru.shift(); AUTO[k] = true; total -= H[k] - HEAD; }
+      // still too tall with only one panel open: let that panel scroll inside itself so the collapsed title bars stay visible
+      if (!stacked && total > avail && c.includes(keep)) { const b = toolEl(keep).querySelector('.tool-body'); b.style.maxHeight = Math.max(140, b.offsetHeight - (total - avail)) + 'px'; }
+    }
+  } else if (!open.length) play.classList.remove('two');
+  ALLT.forEach(k => {
+    const el = toolEl(k), c = !!(TSTATE.coll[k] || (AUTO[k] && k !== 'roll'));
+    el.classList.toggle('collapsed', c); el.querySelector('.tool-title').setAttribute('aria-expanded', String(!c));
+    if (c) el.querySelector('.tool-sum').textContent = '· ' + toolSummary(k);
+  });
+  store.set('toolState', TSTATE);
+}
+function applyTools(keep) {
+  $$('#toolbar button[data-tool]').forEach(b => b.setAttribute('aria-pressed', TOOLS[b.dataset.tool] ? 'true' : 'false'));
+  ALLT.forEach(k => toolEl(k).classList.toggle('hidden', !TOOLS[k]));
+  $('#play').classList.toggle('with-side', SIDE.some(k => TOOLS[k]));
+  $('#toolsClose').classList.toggle('hidden', ALLT.filter(k => TOOLS[k]).length < 2);
+  if (!TOOLS.roll) roll.stop();
+  updateDockVisibility(); store.set('tools', TOOLS); layoutTools(keep);
+}
+$$('#toolbar button[data-tool]').forEach(b => b.onclick = () => {
+  const k = b.dataset.tool; TOOLS[k] = !TOOLS[k];
+  if (TOOLS[k] && k !== 'piano') { TSTATE.coll[k] = false; touchTool(k); }
+  applyTools(k);
+  if (k === 'roll' && TOOLS.roll && S.q) roll.load(S.q, S.answered);
+  if (TOOLS[k] && k !== 'piano') { const el = toolEl(k); requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
+});
+$('#toolsClose').onclick = () => { ALLT.forEach(k => TOOLS[k] = false); applyTools(); };
 $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = false; applyTools(); });
+let toolsRaf = 0;
+new ResizeObserver(() => { cancelAnimationFrame(toolsRaf); toolsRaf = requestAnimationFrame(() => layoutTools()); }).observe($('#main'));
 
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();

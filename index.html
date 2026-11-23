@@ -102,6 +102,7 @@
           <button data-tool="finder" aria-pressed="false">🔍 Chord finder</button>
           <button data-tool="tempo" aria-pressed="false">⏱ Tempo</button>
           <button data-tool="cheat" aria-pressed="false">📋 Cheat sheet</button>
+          <button id="toolsClose" class="hidden" title="Close every open tool">✕ Close all</button>
           <span class="grow"></span>
           <button id="focusBtn" data-focus aria-pressed="false" title="Hide everything except the question (F)">🎯 Focus <kbd>F</kbd></button>
         </div>
@@ -156,6 +157,7 @@
           </div>
 
           <aside class="tools-col" id="toolsCol">
+            <div class="tcol" id="tcolA">
             <div class="tool panel hidden" id="tool-circle">
               <div class="tool-head"><span>◎ Circle of fifths &amp; keys</span><button class="ghost sm" data-close="circle" aria-label="Close">✕</button></div>
               <div id="tkCircle"></div>
@@ -178,6 +180,8 @@
               <div class="seg" id="csTabs"><button data-cs="int" class="active">Intervals</button><button data-cs="chord">Chords</button><button data-cs="scale">Scales</button><button data-cs="key">Keys</button></div>
               <div id="csBody" class="csbody"></div>
             </div>
+            </div>
+            <div class="tcol" id="tcolB"></div>
           </aside>
         </div>
       </div>
