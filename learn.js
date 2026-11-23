@@ -70,7 +70,7 @@ const Learn = (() => {
       <div class="reader-nav">
         <button id="lPrev" ${L.i === 0 ? 'disabled' : ''}>← Back</button>
         <span class="muted small">${L.i + 1} / ${total} · use ← → keys</span>
-        ${last ? '<span></span>' : '<button id="lFwd" class="primary">Next →</button>'}
+        ${last ? '<button id="lPractice2" class="primary">Practise ▶</button>' : '<button id="lFwd" class="primary">Next →</button>'}
       </div>`;
     const k = c.cards[L.i];
     $$('#learnReader .exbtn').forEach(b => b.onclick = () => playEx(k.ex[+b.dataset.ex]));
@@ -81,6 +81,7 @@ const Learn = (() => {
     $('#lPrev').onclick = () => go(L.i - 1);
     if ($('#lFwd')) $('#lFwd').onclick = () => go(L.i + 1);
     if ($('#lPractice')) $('#lPractice').onclick = () => { const id = L.id; close(); startTopic(id); };
+    if ($('#lPractice2')) $('#lPractice2').onclick = () => $('#lPractice').click();
     if ($('#lNext')) $('#lNext').onclick = () => open(nextId());
     exPiano.clear();
     setDock(k && k.ex ? 'Press an ▶ example to hear it and see it here' : 'Free play: click any key', ['ans'], true);
@@ -95,7 +96,7 @@ const Learn = (() => {
     render(); updateDockVisibility();
   }
   function close() {
-    L.id = null; $('#learnReader').classList.add('hidden'); $('#learnMap').classList.remove('hidden');
+    L.id = null; if (typeof renderHome === 'function') renderHome(); $('#learnReader').classList.add('hidden'); $('#learnMap').classList.remove('hidden');
     renderMap(); updateDockVisibility(); $('#main').scrollTop = 0;
   }
 

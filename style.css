@@ -616,3 +616,23 @@ body.tools-side .dock-head, body.tools-side .dock-scroll { max-width: 1272px; }
 @media (max-width: 1100px) and (min-width: 900px) { #tkInfo .notes { gap: 4px; } #tkInfo .notes .note { width: 34px; } }
 .tool.collapsed { padding-top: 6px; padding-bottom: 6px; }
 @media (max-height: 820px) and (min-width: 900px) { #tkCircle svg { max-width: 210px; } }
+
+/* ============ flow: next-step rows (home hero, session wrap-up) ============ */
+.steps { display: flex; flex-direction: column; gap: 8px; margin-top: var(--s4); max-width: 620px; }
+.step { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px; }
+.step .num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--panel3); font-weight: 700; font-size: 13px; }
+.step .st { display: flex; flex-direction: column; min-width: 0; }
+.step .st-t { font-weight: 600; font-size: 15px; }
+.step .st-s { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step .go { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.step.now { padding: 14px 16px; background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 24px rgba(139, 108, 255, .3); }
+.step.now:hover { filter: brightness(1.08); }
+.step.now .st-t { font-size: 17px; }
+.step.now .num { background: rgba(255, 255, 255, .2); }
+.step.now .st-s, .step.now .go { color: rgba(255, 255, 255, .85); }
+.step.now kbd { border-color: rgba(255, 255, 255, .5); color: #fff; }
+.step.done .num { background: var(--good-soft); color: var(--good); }
+.step.done .st-t { color: var(--muted); font-weight: 500; }
+.nextup { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.nextup .step { max-width: 620px; margin: 6px 0 var(--s3); }
+@media (max-width: 680px) { .step .st-s { white-space: normal; } .step .go kbd { display: none; } }

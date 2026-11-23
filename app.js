@@ -248,7 +248,6 @@ function startQuiz(topics, opts = {}) {
 function startDaily() { const P = Coach.buildPlan(10); startQuiz([...new Set(P.plan.map(x => x.topic))], { plan: P.plan, total: 10, kind: 'daily' }); }
 function startTopic(id) { startQuiz([id], { total: 8, plan: [{ topic: id, lesson: Coach.status(id) === 'new' }], kind: 'topic' }); }
 
-$('#dailyBtn').onclick = () => startDaily();
 $('#startBtn').onclick = () => startQuiz();
 $('#endBtn').onclick = () => finish();
 $('#nextBtn').onclick = () => advance();
@@ -473,6 +472,7 @@ function conclude(result, answerText, extra = '') {
   $('#qScore').innerHTML = scoreHTML();
   $('#qBar').style.width = S.total ? (S.idx / S.total * 100) + '%' : '0';
   $('#learnRow').classList.add('hidden'); $('#lessonPeek').classList.add('hidden');
+  $('#nextBtn').innerHTML = (S.total && S.idx >= S.total ? 'Finish' : 'Next') + ' <kbd>Enter</kbd>';
   const fb = $('#qFeedback'); fb.className = 'feedback ' + (result === 'first' || result === 'later' ? 'good' : 'bad');
   const title = {
     first: S.streak >= 3 ? `✓ Correct! ${S.streak} in a row` : R.pick(['✓ Correct!', '✓ Nice!', '✓ Yes!', '✓ Spot on!']),
@@ -496,6 +496,11 @@ function finish() {
   const missed = S.hist.filter(h => !h.ok), missedTopics = [...new Set(missed.map(h => h.topic))];
   const head = n === 0 ? 'Every bit counts' : pct >= 85 ? 'Great session!' : pct >= 60 ? 'Good work. That\'s real progress.' : 'You showed up, and that\'s the hard part.';
   const goalHit = Coach.today() >= Coach.goal();
+  // What to do next: after a shaky single-topic session, repeat it; otherwise move along the course.
+  const topics = S.topics, kind = S.kind, again = () => kind === 'daily' ? startDaily() : kind === 'topic' ? startTopic(topics[0]) : startQuiz(topics);
+  const againLabel = kind === 'topic' ? `One more round: ${topicName(topics[0])}` : kind === 'daily' ? 'Another 5-minute round' : 'One more round';
+  const course = Flow.course(), shaky = kind === 'topic' && n > 0 && pct < 60;
+  const nextStep = (!shaky && course) || { kind: 'again', icon: '↻', title: againLabel, sub: shaky ? 'A second pass right away is where it starts to stick.' : 'Fresh questions on the same topics.', go: again };
   $('#summary').innerHTML = `
     <div class="panel">
       <div class="sum-hero">
@@ -504,36 +509,66 @@ function finish() {
           <div class="sum-stats"><div><b>⚡ ${S.xp}</b>XP earned</div><div><b>${mins} min</b>practised</div><div><b>${S.score}/${n}</b>first try</div><div><b>${Coach.today()}/${Coach.goal()}</b>today's goal${goalHit ? ' ✓' : ''}</div></div>
           ${S.levelUps.length ? `<p style="margin-top:10px"><span class="lvl-pop">Level ${S.levelUps[S.levelUps.length - 1]} reached!</span></p>` : ''}
           ${S.boxUps.length ? `<div class="upchips"><span class="muted small">Moved up:</span>${S.boxUps.map(t => `<span class="chip">▲ ${topicName(t)}</span>`).join('')}</div>` : ''}
-          <div class="btnrow" style="margin-top:16px">
-            <button class="primary" id="againBtn">▶ One more round</button>
-            ${missedTopics.length ? `<button id="missBtn">Drill these topics (${missedTopics.length})</button>` : ''}
-            <button class="ghost" id="homeBtn">Home</button>
-          </div></div>
+          </div>
+      </div>
+      <div class="nextup">
+        <div class="kicker">Up next</div>
+        <button class="step now" id="nextStepBtn"><span class="num">${nextStep.icon}</span><span class="st"><span class="st-t">${nextStep.title}</span><span class="st-s">${nextStep.sub}</span></span><span class="go">Go <kbd>Enter</kbd></span></button>
+        <div class="btnrow">
+          ${nextStep.kind === 'again' ? (course ? `<button id="sumCourse">${course.icon} ${course.title}</button>` : '') : `<button id="againBtn">↻ ${againLabel}</button>`}
+          ${missedTopics.length ? `<button id="missBtn">Drill what I missed (${missedTopics.length} topic${missedTopics.length > 1 ? 's' : ''})</button>` : ''}
+          ${goalHit ? '<button id="sumCreate">🎹 Make a loop</button>' : ''}
+          <button class="ghost" id="homeBtn">Home</button>
+        </div>
       </div>
     </div>
     ${n ? `<div class="panel"><div class="panel-title">By topic (first-try accuracy)</div>${rows}</div>` : ''}
     ${missed.length ? `<div class="panel"><div class="panel-title">Worth another look</div><ul class="missed">${missed.map(h => `<li>${h.prompt}<div class="a">→ ${h.answer}</div></li>`).join('')}</ul></div>` : ''}`;
   $('#summary').classList.remove('hidden'); $('#main').scrollTop = 0;
-  const topics = S.topics, kind = S.kind;
-  $('#againBtn').onclick = () => kind === 'daily' ? startDaily() : kind === 'topic' ? startTopic(topics[0]) : startQuiz(topics);
+  $('#nextStepBtn').onclick = () => { $('#summary').classList.add('hidden'); nextStep.go(); };
+  if ($('#againBtn')) $('#againBtn').onclick = again;
+  if ($('#sumCourse')) $('#sumCourse').onclick = () => { $('#summary').classList.add('hidden'); course.go(); };
+  if ($('#sumCreate')) $('#sumCreate').onclick = () => { goHome(); showTab('create'); };
   if ($('#missBtn')) $('#missBtn').onclick = () => startQuiz(missedTopics, { total: 8, kind: 'custom' });
   $('#homeBtn').onclick = () => goHome();
   quizDockNote();
 }
 function goHome() { $('#summary').classList.add('hidden'); $('#play').classList.add('hidden'); renderSetup(); renderHome(); $('#setup').classList.remove('hidden'); showTab('quiz'); }
 
+// ---- flow: what should happen next (shared by the home screen, session wrap-up and lessons) ----
+// The loop is: daily practice -> read the next lesson -> practise it -> use it in Create.
+const Flow = {
+  read: id => store.get('learned', []).includes(id),
+  // The next step on the course: the first topic whose lesson is unread or that hasn't been practised (lesson first, then its questions).
+  course() {
+    const first = TOPICS.find(t => !Flow.read(t.id) || Coach.status(t.id) === 'new'), id = first && first.id, unread = null;
+    if (id) {
+      const t = TOPICS.find(x => x.id === id), n = TOPICS.indexOf(t) + 1;
+      return Flow.read(id)
+        ? { kind: 'practise', icon: '▶', title: `Practise: ${t.name}`, sub: 'You read the lesson. 8 questions to make it stick.', go: () => startTopic(id) }
+        : { kind: 'lesson', icon: '📖', title: `Lesson ${n}: ${t.name}`, sub: `${COURSE[id].mins} min read with examples, then practise it`, go: () => Learn.open(id) };
+    }
+    if (unread) return { kind: 'lesson', icon: '📖', title: `Lesson ${TOPICS.indexOf(unread) + 1}: ${unread.name}`, sub: `${COURSE[unread.id].mins} min read with examples`, go: () => Learn.open(unread.id) };
+    return null;
+  },
+  steps() {
+    const P = Coach.buildPlan(10), done = Coach.today() >= Coach.goal(), names = ts => ts.map(topicName).join(', ');
+    const bits = [P.news.length ? `New: ${names(P.news)}` : '', P.review.length ? `Review: ${names(P.review.slice(0, 3))}${P.review.length > 3 ? '…' : ''}` : ''].filter(Boolean);
+    const out = [{ id: 'dailyBtn', icon: '▶', done, title: done ? 'Daily practice done. Bonus round?' : '5-minute practice', sub: bits.join(' · ') || '10 questions · retry freely · stop anytime', go: () => startDaily() }];
+    const c = Flow.course(); if (c) out.push(Object.assign({ id: 'studyBtn' }, c));
+    out.push({ id: 'makeBtn', icon: '🎹', title: 'Make a loop', sub: 'Use it for real: build a progression and melody in Create', go: () => showTab('create') });
+    return out;
+  },
+};
+
 // ---- home ----
 function renderHome() {
   const P = Coach.buildPlan(10), L = Coach.level(), today = Coach.today(), goal = Coach.goal(), first = !Object.keys(STATS).length && !Coach.xp();
   $('#heroKicker').textContent = first ? 'Welcome' : 'Today';
   $('#heroTitle').textContent = first ? 'Start with a 5-minute session' : P.mode === 'review' ? 'Review day: let\'s lock in what you know' : today >= goal ? 'Goal done. Bonus round?' : 'Ready when you are';
-  const chips = [];
-  if (P.news.length) chips.push(`<span>New:</span>${P.news.map(t => `<span class="chip new">${topicName(t)}</span>`).join('')}`);
-  const rv = P.review.slice(0, 4);
-  if (rv.length) chips.push(`<span>${P.news.length ? '· Review:' : 'Review:'}</span>${rv.map(t => `<span class="chip">${topicName(t)}</span>`).join('')}`);
-  $('#heroPlan').innerHTML = chips.join(' ') || '<span>A short mixed session.</span>';
-  $('#dailyBtn').textContent = today >= goal ? '▶ Bonus 5-minute round' : '▶ Start 5-minute practice';
-  const nx = Coach.nextNew(); $('#studyBtn').textContent = nx ? `📖 Study first: ${topicName(nx)}` : '📖 Browse lessons'; $('#studyBtn').onclick = () => nx ? Learn.open(nx) : showTab('learn');
+  const steps = Flow.steps(), now = steps.find(s => !s.done);
+  $('#heroSteps').innerHTML = steps.map((s, k) => `<button class="step ${s === now ? 'now' : ''} ${s.done ? 'done' : ''}" id="${s.id}"><span class="num">${s.done ? '✓' : k + 1}</span><span class="st"><span class="st-t">${s.title}</span><span class="st-s">${s.sub}</span></span><span class="go">${s === now ? 'Start →' : '→'}</span></button>`).join('');
+  steps.forEach(s => $('#' + s.id).onclick = s.go);
   $('#lvlRing').style.setProperty('--p', Math.round(L.into / L.need * 100)); $('#lvlNum').textContent = L.lv;
   $('#lvlText').innerHTML = `${L.into}/${L.need} XP<br><span class="muted small">${Coach.xp()} total</span>`;
   $('#goalRing').style.setProperty('--p', Math.min(100, Math.round(today / goal * 100))); $('#goalRing').style.setProperty('--c', today >= goal ? 'var(--good)' : 'var(--accent2)');
@@ -560,6 +595,7 @@ function setFocus(on) { document.body.classList.toggle('focus', on); $('#focusBt
 $('#focusBtn').onclick = () => setFocus(!document.body.classList.contains('focus'));
 
 document.addEventListener('keydown', e => {
+  if (TAB === 'quiz' && e.key === 'Enter' && !$('#summary').classList.contains('hidden') && $('#nextStepBtn') && e.target.tagName !== 'BUTTON') { e.preventDefault(); return $('#nextStepBtn').click(); }
   if (TAB !== 'quiz' || $('#play').classList.contains('hidden')) return;
   if (['SELECT', 'INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
