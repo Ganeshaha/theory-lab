@@ -123,7 +123,8 @@ const TOOLS = Object.assign({ piano: true, roll: false, circle: false, finder: f
 function updateDockVisibility() {
   const inQuiz = TAB === 'quiz' && !$('#play').classList.contains('hidden');
   const needed = inQuiz && S.q && S.q.type === 'piano' && !S.answered;
-  $('#dock').classList.toggle('hidden', !((inQuiz && (TOOLS.piano || needed)) || TAB === 'explore' || TAB === 'create'));
+  const reading = TAB === 'learn' && typeof Learn !== 'undefined' && Learn.isOpen();
+  $('#dock').classList.toggle('hidden', !((inQuiz && (TOOLS.piano || needed)) || TAB === 'explore' || TAB === 'create' || reading));
 }
 function showTab(name) {
   TAB = name;
@@ -131,7 +132,7 @@ function showTab(name) {
   $$('.tabpane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   updateDockVisibility();
   $('#quizPiano').classList.toggle('hidden', name !== 'quiz');
-  $('#explorePiano').classList.toggle('hidden', name !== 'explore' && name !== 'create');
+  $('#explorePiano').classList.toggle('hidden', !['explore', 'create', 'learn'].includes(name));
   if (name === 'stats') renderStats();
   if (name === 'explore') setDock('Explorer: click keys to play them', ['ans']);
   if (name === 'create') setDock('Create: the current chord lights up while the loop plays', ['ans']);
@@ -292,10 +293,11 @@ function showLesson(id, cb) {
   $('#qPrompt').innerHTML = lessonHTML(id, 'New topic');
   ['#replayBtn', '#qFeedback', '#qPianoCtl', '#learnRow'].forEach(s => $(s).classList.add('hidden'));
   const o = $('#qOpts'); o.classList.remove('hidden');
-  o.innerHTML = `<div class="lesson-actions">${LESSONS[id].demo ? '<button id="demoBtn">▶ Hear it</button>' : ''}<button id="lessonGo" class="primary">Got it, try a question <kbd>Enter</kbd></button></div>`;
+  o.innerHTML = `<div class="lesson-actions">${LESSONS[id].demo ? '<button id="demoBtn">▶ Hear it</button>' : ''}<button id="lessonGo" class="primary">Got it, try a question <kbd>Enter</kbd></button><button id="fullLesson" class="ghost">📖 Read the full lesson</button></div>`;
   quizPiano.clear(); quizPiano.selectable = false; quizDockNote();
   if ($('#demoBtn')) $('#demoBtn').onclick = () => playDemo(id);
   $('#lessonGo').onclick = () => lessonDone();
+  $('#fullLesson').onclick = () => Learn.open(id);
   $('#main').scrollTop = 0;
   if (LESSONS[id].demo && $('#autoPlay').checked) setTimeout(() => S.inLesson && playDemo(id), 300);
 }
@@ -312,6 +314,7 @@ function toggleLessonPeek() {
     el.innerHTML = lessonHTML(S.q.topic, 'Lesson') + (LESSONS[S.q.topic].demo ? '<div class="btnrow" style="margin-top:10px"><button class="sm" id="peekDemo">▶ Hear it</button><button class="sm ghost" id="peekClose">Close</button></div>' : '<div class="btnrow" style="margin-top:10px"><button class="sm ghost" id="peekClose">Close</button></div>');
     if ($('#peekDemo')) $('#peekDemo').onclick = () => playDemo(S.q.topic);
     $('#peekClose').onclick = () => toggleLessonPeek();
+    $('#peekClose').insertAdjacentHTML('beforebegin', '<button class="sm ghost" id="peekFull">📖 Full lesson</button>'); $('#peekFull').onclick = () => Learn.open(S.q.topic);
   } else if (S.q) { quizPiano.clear(); quizPiano.mark(S.q.show, 'q'); if (S.answered && S.q.reveal) quizPiano.mark(S.q.reveal, 'ans'); }
 }
 
@@ -328,7 +331,7 @@ function checkBreak() {
 function nextQuestion() {
   if (S.total && S.idx >= S.total) return finish();
   const pick = pickTopic();
-  const needsLesson = (pick.lesson || Coach.status(pick.topic) === 'new') && LESSONS[pick.topic] && !S.lessonsShown.has(pick.topic);
+  const needsLesson = (pick.lesson || Coach.status(pick.topic) === 'new') && LESSONS[pick.topic] && !S.lessonsShown.has(pick.topic) && !Learn.isLearned(pick.topic);
   if (needsLesson) { S.lessonsShown.add(pick.topic); return showLesson(pick.topic, () => renderQuestion(pick)); }
   renderQuestion(pick);
 }
@@ -508,6 +511,7 @@ function renderHome() {
   if (rv.length) chips.push(`<span>${P.news.length ? '· Review:' : 'Review:'}</span>${rv.map(t => `<span class="chip">${topicName(t)}</span>`).join('')}`);
   $('#heroPlan').innerHTML = chips.join(' ') || '<span>A short mixed session.</span>';
   $('#dailyBtn').textContent = today >= goal ? '▶ Bonus 5-minute round' : '▶ Start 5-minute practice';
+  const nx = Coach.nextNew(); $('#studyBtn').textContent = nx ? `📖 Study first: ${topicName(nx)}` : '📖 Browse lessons'; $('#studyBtn').onclick = () => nx ? Learn.open(nx) : showTab('learn');
   $('#lvlRing').style.setProperty('--p', Math.round(L.into / L.need * 100)); $('#lvlNum').textContent = L.lv;
   $('#lvlText').innerHTML = `${L.into}/${L.need} XP<br><span class="muted small">${Coach.xp()} total</span>`;
   $('#goalRing').style.setProperty('--p', Math.min(100, Math.round(today / goal * 100))); $('#goalRing').style.setProperty('--c', today >= goal ? 'var(--good)' : 'var(--accent2)');
@@ -561,7 +565,7 @@ function renderStats() {
   }).join('')}</div>`).join('');
   $('#statsBody').innerHTML = tiles + parts;
 }
-$('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); Coach.reset(); renderStats(); renderSetup(); renderHome(); } };
+$('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); Coach.reset(); Learn.reset(); renderStats(); renderSetup(); renderHome(); } };
 $('#practiseWeak').onclick = () => startQuiz(weakest(5));
 
 // =====================================================================

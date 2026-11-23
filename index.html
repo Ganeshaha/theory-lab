@@ -12,6 +12,7 @@
     <div class="brand"><span class="logo">♪</span> Theory Lab</div>
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="quiz" role="tab">Practice</button>
+      <button class="tab" data-tab="learn" role="tab">Learn</button>
       <button class="tab" data-tab="create" role="tab">Create</button>
       <button class="tab" data-tab="explore" role="tab">Explorer</button>
       <button class="tab" data-tab="stats" role="tab">Progress</button>
@@ -40,6 +41,7 @@
             <div id="heroPlan" class="heroplan"></div>
             <div class="btnrow hero-cta">
               <button id="dailyBtn" class="primary xl">▶ Start 5-minute practice</button>
+              <button id="studyBtn" class="lg">📖 Study first</button>
               <span class="muted small">10 questions · retry freely · stop anytime</span>
             </div>
           </div>
@@ -176,6 +178,20 @@
       <div id="summary" class="wrap narrow hidden"></div>
     </section>
 
+    <!-- ================= LEARN ================= -->
+    <section id="tab-learn" class="tabpane">
+      <div class="wrap">
+        <div id="learnMap">
+          <div class="page-head">
+            <div><h1>Learn</h1><p class="muted">Short, interactive lessons that follow the course and book. Read one (3–6 minutes), then practise it.</p></div>
+            <div id="learnProgress" class="muted"></div>
+          </div>
+          <div id="learnParts"></div>
+        </div>
+        <div id="learnReader" class="reader hidden"></div>
+      </div>
+    </section>
+
     <!-- ================= CREATE ================= -->
     <section id="tab-create" class="tabpane">
       <div class="wrap">
@@ -309,7 +325,9 @@
 <script src="theory.js"></script>
 <script src="lessons.js"></script>
 <script src="coach.js"></script>
+<script src="course.js"></script>
 <script src="app.js"></script>
 <script src="create.js"></script>
+<script src="learn.js"></script>
 </body>
 </html>

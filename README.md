@@ -9,6 +9,7 @@ The topics follow the structure of J. Anthony Allen's course and book *Music The
 
 ## What's inside
 
+- **Learn**: 25 short, interactive lessons (3–6 minutes each) in the course's order. They're presented as cards with playable examples shown on a piano, "in your DAW" tips, common mistakes, further reading, and a button to practise the topic straight after.
 - **Practice**: one-click 5-minute sessions. Questions are generated fresh every time (new keys, roots and chords), across 25 topics: intervals, triads, diatonic progressions, 7th chords, minor keys, the circle of fifths, extensions, melody, bass lines, chromaticism, modes, pentatonics, chromatic mediants, borrowed chords, exotic scales, chord progressions, rhythm and tempo, arrangement, tuning and frequency, voice leading, Camelot harmonic mixing, and ear training.
 - **Create**: build a chord loop from Roman-numeral pads, hear it with smooth voice leading, bass and drums, load starter progressions by mood, hit **✨ Spice it** to apply (and learn) real techniques, then **export MIDI** to your DAW.
 - **Explorer**: any key, scale, mode or chord on a labelled piano with scale-degree labels, plus a clickable circle of fifths and a tempo/delay calculator.
@@ -26,13 +27,17 @@ The app is built to be a learning tool rather than a test:
 
 Progress is stored in your browser's local storage.
 
+Lesson text is original writing for this project. It follows the book's structure and references its chapters and song analyses, but does not reproduce the book.
+
 ## Files
 
 | File | Purpose |
 |---|---|
 | `index.html`, `style.css` | Layout and styling |
 | `theory.js` | Music theory engine and all question generators |
-| `lessons.js` | Mini-lesson content per topic |
+| `lessons.js` | 30-second mini-lessons shown before a new topic |
+| `course.js` | Full study lessons for the Learn tab |
+| `learn.js` | Learn tab: course map and lesson reader |
 | `coach.js` | Spaced repetition, daily plans, XP |
 | `app.js` | Practice flow, piano, tools, Explorer |
 | `create.js` | Progression builder, synth, MIDI export |
