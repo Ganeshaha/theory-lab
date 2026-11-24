@@ -43,6 +43,17 @@ const Snd = {
   note(m) { this.tone(m, 0, 0.6, 0.3); },
 };
 
+// ---------------- shared key (highlighted on the keyboard and the piano roll) ----------------
+const KEYSEL = Object.assign({ root: 'C', type: 'off' }, store.get('pianoKey', {}));
+let KEY_READY = false; // set at the end of the script, once every helper exists
+const DEG_SEMI = { 0: '1', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♯4', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' };
+function keyInfo() {
+  if (!KEY_READY || KEYSEL.type === 'off' || !SCALES[KEYSEL.type]) return null;
+  const notes = scaleNotes(KEYSEL.root, KEYSEL.type), r = pc(KEYSEL.root), byPc = {};
+  notes.forEach((n, i) => { const iv = SCALES[KEYSEL.type].iv[i]; byPc[pc(n)] = { name: n, deg: (typeof DEG !== 'undefined' && DEG[iv]) || DEG_SEMI[(pc(n) - r + 12) % 12] }; });
+  return { notes, byPc, root: r };
+}
+
 // ---------------- piano ----------------
 let LABEL_MODE = store.get('labels', 'both');
 const ALL_PIANOS = [];
@@ -52,12 +63,12 @@ class Piano {
     this.el.innerHTML = ''; this.el.classList.add('piano');
     const ww = 100 / range(LO, HI).filter(m => !isBlackPc(m)).length; let wi = 0;
     for (let m = LO; m <= HI; m++) {
-      const k = document.createElement('div'), lbl = document.createElement('span'); lbl.className = 'lbl'; k.appendChild(lbl);
+      const k = document.createElement('div'), lbl = document.createElement('span'), deg = document.createElement('i'); lbl.className = 'lbl'; deg.className = 'deg'; k.appendChild(deg); k.appendChild(lbl);
       if (isBlackPc(m)) { k.className = 'key black'; k.style.left = (wi * ww - ww * 0.31) + '%'; k.style.width = (ww * 0.62) + '%'; }
       else { k.className = 'key white'; k.style.left = (wi * ww) + '%'; k.style.width = ww + '%'; wi++; }
       if (m === 60) { k.classList.add('middle-c'); k.title = 'Middle C (C4; Ableton calls it C3)'; }
       k.addEventListener('pointerdown', e => { e.preventDefault(); this.press(m); });
-      this.el.appendChild(k); this.keys[m] = { el: k, lbl, name: null, sub: null };
+      this.el.appendChild(k); this.keys[m] = { el: k, lbl, deg, name: null, sub: null };
     }
     this.refresh();
   }
@@ -70,7 +81,12 @@ class Piano {
   }
   refresh() {
     this.el.classList.toggle('hide-labels', this.hidden || LABEL_MODE === 'off');
-    for (const [m, k] of Object.entries(this.keys)) k.lbl.innerHTML = (k.name ? disp(k.name) : this.defaultLabel(+m)) + (k.sub ? `<em>${k.sub}</em>` : '');
+    const K = keyInfo();
+    for (const [m, k] of Object.entries(this.keys)) {
+      const p = +m % 12, info = K && K.byPc[p], spelled = info && (isBlackPc(p) || info.name !== SHARP_NAMES[p]) ? disp(info.name) + (p === 0 ? `<sub>${Math.floor(m / 12) - 1}</sub>` : '') : null;
+      k.lbl.innerHTML = (k.name ? disp(k.name) : spelled || this.defaultLabel(+m)) + (k.sub ? `<em>${k.sub}</em>` : '');
+      k.el.classList.toggle('inkey', !!info); k.el.classList.toggle('keyroot', !!info && p === K.root); k.deg.textContent = info ? info.deg : '';
+    }
   }
   setHidden(h) { this.hidden = h; this.refresh(); }
   clear() {
@@ -616,7 +632,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'r') Snd.play(S.q.audio);
   else if (k === 'h') hint();
   else if (k === 'l') toggleLessonPeek();
-  else if (k === 'k' && TOOLS.roll) roll.keyFromQuestion();
+  else if (k === 'k') { if (TOOLS.roll) roll.keyFromQuestion(); else dockMsg(applyQuestionKey().msg); }
 });
 
 // =====================================================================
@@ -843,8 +859,8 @@ class PianoRoll {
     ctl('follow').onchange = e => { this.follow = e.target.checked; store.set('rollFollow', this.follow); };
     ctl('len').onchange = e => this.len = +e.target.value;
     ctl('bpm').onchange = () => { if (this.timer) { this.stop(); this.play(); } };
-    ctl('sroot').onchange = e => { this.sroot = e.target.value; this.applyScale(); };
-    ctl('stype').onchange = e => { this.stype = e.target.value; this.applyScale(); };
+    ctl('sroot').onchange = e => setKey(e.target.value, this.stype === 'off' ? 'major' : this.stype);
+    ctl('stype').onchange = e => setKey(this.sroot, e.target.value);
     ctl('qkey').onclick = () => this.keyFromQuestion();
     this.bpmEl = ctl('bpm'); this.playBtn = ctl('play'); this.applyScale();
   }
@@ -875,13 +891,7 @@ class PianoRoll {
     this.keyTitle.textContent = on ? `${disp(this.sroot)} ${SCALES[this.stype].name}: ${notes.map(disp).join(' ')}` : 'No key selected: pick one to highlight its notes';
   }
   keyFromQuestion() {
-    if (!S.q) return this.msg('Start a question first.');
-    const k = questionKey(S.q, S.answered);
-    if (k && k.ear) return this.msg('Ear-training question: answer first (the key would give it away).');
-    if (!k) return this.msg('This question isn\'t in a particular key. Pick a scale yourself, or answer first and try again.');
-    this.setScale(k.root, k.type);
-    const how = { question: 'named in the question', answer: 'from the answer', notes: 'best fit for the question\'s notes' }[k.src];
-    this.msg(`Scale set to <b>${disp(this.sroot)} ${SCALES[k.type].name}</b> (${how}). Shaded rows are in the scale; the teal rows are the root.`);
+    const r = applyQuestionKey(); this.msg(r.msg); if (!r.ok) return;
     const row = this.cells[Object.keys(this.cells).map(Number).filter(m => m % 12 === pc(this.sroot) && m >= 60).sort((x, y) => x - y)[0]];
     if (row) this.scroller.scrollTo({ top: Math.max(0, row[0].offsetTop - 120), behavior: 'smooth' });
   }
@@ -970,6 +980,26 @@ function questionKey(q, answered) {
   return k ? Object.assign(k, { src: 'notes' }) : null;
 }
 
+function applyQuestionKey() {
+  if (!S.q || $('#play').classList.contains('hidden')) return { msg: 'Start a question first.' };
+  const k = questionKey(S.q, S.answered);
+  if (k && k.ear) return { msg: 'Ear-training question: answer first (the key would give it away).' };
+  if (!k) return { msg: 'This question isn\'t in a particular key. Pick one yourself, or answer first and try again.' };
+  setKey(k.root, k.type);
+  const how = { question: 'named in the question', answer: 'from the answer', notes: 'best fit for the question\'s notes' }[k.src];
+  return { ok: true, msg: `Key set to <b>${disp(KEYSEL.root)} ${SCALES[k.type].name}</b> (${how}).` };
+}
+function setKey(root, type) {
+  KEYSEL.root = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; KEYSEL.type = type; store.set('pianoKey', KEYSEL);
+  $('#dkRoot').value = KEYSEL.root; $('#dkType').value = type; $('#dock').classList.toggle('keyed', type !== 'off');
+  ALL_PIANOS.forEach(p => p.refresh());
+  if (typeof roll !== 'undefined' && (roll.sroot !== KEYSEL.root || roll.stype !== type)) roll.setScale(KEYSEL.root, type);
+}
+let dkMsgT = 0;
+function dockMsg(html) {
+  const el = $('#dkMsg'); el.innerHTML = html; el.classList.remove('hidden'); clearTimeout(dkMsgT); dkMsgT = setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
 // ---- circle & keys tool ----
 const TK = { root: 'C', type: 'major' };
 function renderKeyTool() {
@@ -986,7 +1016,7 @@ function renderKeyTool() {
     <div class="row2"><button class="sm" id="tkScale">▶ Scale</button><button class="sm" id="tkRoll" title="Shade these notes in the piano roll">▦ Show in piano roll</button></div>`;
   $$('#tkInfo .tkchords button').forEach(b => b.onclick = () => { const v = mids(voice(d[+b.dataset.i].notes)); Snd.play(EV.chord(v)); flashKeys(v); });
   $('#tkScale').onclick = () => { const v = mids(voice(s.concat([TK.root]))); Snd.play(EV.arp(v, 0, 0.2, 0.35)); flashKeys(v, 1800); };
-  $('#tkRoll').onclick = () => { TOOLS.roll = true; applyTools(); roll.setScale(TK.root, sid); };
+  $('#tkRoll').onclick = () => { TOOLS.roll = true; applyTools(); setKey(TK.root, sid); };
 }
 
 // ---- chord finder ----
@@ -1149,6 +1179,12 @@ $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = fal
 let toolsRaf = 0;
 new ResizeObserver(() => { cancelAnimationFrame(toolsRaf); toolsRaf = requestAnimationFrame(() => layoutTools()); }).observe($('#main'));
 
+$('#dkRoot').innerHTML = ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('');
+$('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCALES).map(([id, s]) => `<option value="${id}">${s.name}</option>`).join('');
+$('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
+$('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
+$('#dkFromQ').onclick = () => dockMsg(applyQuestionKey().msg);
+KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type);
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
 showTab('quiz');
