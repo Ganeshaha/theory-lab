@@ -632,7 +632,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'r') Snd.play(S.q.audio);
   else if (k === 'h') hint();
   else if (k === 'l') toggleLessonPeek();
-  else if (k === 'k') { if (TOOLS.roll) roll.keyFromQuestion(); else dockMsg(applyQuestionKey().msg); }
+  else if (k === 'k') { if (TOOLS.roll) roll.keyFromQuestion(); else { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); } }
 });
 
 // =====================================================================
@@ -891,7 +891,7 @@ class PianoRoll {
     this.keyTitle.textContent = on ? `${disp(this.sroot)} ${SCALES[this.stype].name}: ${notes.map(disp).join(' ')}` : 'No key selected: pick one to highlight its notes';
   }
   keyFromQuestion() {
-    const r = applyQuestionKey(); this.msg(r.msg); if (!r.ok) return;
+    const r = applyQuestionKey(); if (!r.ok) return this.msg(r.msg);
     const row = this.cells[Object.keys(this.cells).map(Number).filter(m => m % 12 === pc(this.sroot) && m >= 60).sort((x, y) => x - y)[0]];
     if (row) this.scroller.scrollTo({ top: Math.max(0, row[0].offsetTop - 120), behavior: 'smooth' });
   }
@@ -1188,7 +1188,7 @@ $('#dkRoot').innerHTML = ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</o
 $('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCALES).map(([id, s]) => `<option value="${id}">${s.name}</option>`).join('');
 $('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
 $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
-$('#dkFromQ').onclick = () => dockMsg(applyQuestionKey().msg);
+$('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); };
 KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type);
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
