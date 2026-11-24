@@ -59,10 +59,11 @@ let LABEL_MODE = store.get('labels', 'both');
 const ALL_PIANOS = [];
 // Right-click a key to leave it marked (on every keyboard) until it is right-clicked again. Marks survive questions and page changes.
 const PINS = new Set();
-function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; pinName(); }
+let PIN_NAMES = store.get('pinNames', true);
+function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; $('#dkNameSw').classList.toggle('hidden', !PINS.size); pinName(); }
 // The keyboard bar names whatever the marked keys spell: a note, an interval or a chord.
 function pinName() {
-  const el = $('#dkName'); if (!el) return; const n = PINS.size ? nameNotes([...PINS]) : null;
+  const el = $('#dkName'); if (!el) return; const n = PINS.size && PIN_NAMES ? nameNotes([...PINS]) : null;
   el.innerHTML = n ? `<b>${n.name}</b>${n.detail ? `<small>${n.detail}</small>` : ''}` : ''; el.classList.toggle('hidden', !n);
 }
 function togglePin(m) { if (PINS.has(m)) PINS.delete(m); else { PINS.add(m); Snd.note(m); } syncPins(); }
@@ -1399,6 +1400,8 @@ $('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCA
 $('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
 $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
 $('#dkUnpin').onclick = () => { PINS.clear(); syncPins(); };
+$('#dkNameOn').checked = PIN_NAMES;
+$('#dkNameOn').onchange = e => { PIN_NAMES = e.target.checked; store.set('pinNames', PIN_NAMES); pinName(); };
 $('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); else $('#dkMsg').classList.add('hidden'); };
 $('#dkAuto').checked = KEY_AUTO;
 $('#dkAuto').onchange = e => { KEY_AUTO = e.target.checked; store.set('keyAuto', KEY_AUTO); if (KEY_AUTO && S.q && !$('#play').classList.contains('hidden')) autoKey(S.q, S.answered); };

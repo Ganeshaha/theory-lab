@@ -902,3 +902,7 @@ body.focus.in-play .gear { display: none; }
 /* keyboard bar: Clear marks at the far left, the chord name centred in the free space */
 .dkname { margin: 0 auto; }
 #dockNote:has(+ .dkname:not(.hidden)) { margin-right: 0; }
+.dkswitch { flex: none; font-size: 12px; color: var(--muted); gap: 6px; }
+.dkswitch.hidden { display: none; }
+.dkswitch span { width: 28px; height: 16px; } .dkswitch span::after { width: 10px; height: 10px; } .dkswitch input:checked + span::after { transform: translateX(12px); }
+.dock.collapsed .dkswitch { display: none; }
