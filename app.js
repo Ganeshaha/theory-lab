@@ -60,7 +60,7 @@ const ALL_PIANOS = [];
 // Right-click a key to leave it marked (on every keyboard) until it is right-clicked again. Marks survive questions and page changes.
 const PINS = new Set();
 let PIN_NAMES = store.get('pinNames', true);
-function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; $('#dkNameSw').classList.toggle('hidden', !PINS.size); pinName(); }
+function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); pinName(); }
 // The keyboard bar names whatever the marked keys spell: a note, an interval or a chord.
 function pinName() {
   const el = $('#dkName'); if (!el) return; const n = PINS.size && PIN_NAMES ? nameNotes([...PINS]) : null;

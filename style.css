@@ -906,3 +906,4 @@ body.focus.in-play .gear { display: none; }
 .dkswitch.hidden { display: none; }
 .dkswitch span { width: 28px; height: 16px; } .dkswitch span::after { width: 10px; height: 10px; } .dkswitch input:checked + span::after { transform: translateX(12px); }
 .dock.collapsed .dkswitch { display: none; }
+.dock.collapsed #dkUnpin { display: none; }
