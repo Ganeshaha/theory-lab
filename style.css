@@ -762,3 +762,5 @@ button.primary:hover { background: linear-gradient(180deg, #a78dff, #8869fb); }
 .key.black .deg { color: #cbbfff; } .key.black.keyroot .deg { color: #8ff0ff; }
 .piano.hide-labels .deg { visibility: hidden; }
 .pr-hint:empty, .cfout:empty { display: none; }
+.csbody td.mono { white-space: nowrap; }
+.cs-qual th { padding-top: 10px; }

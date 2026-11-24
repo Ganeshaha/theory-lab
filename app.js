@@ -1066,13 +1066,18 @@ let CS_TAB = 'int';
 function renderCheat() {
   $$('#csTabs button').forEach(b => b.classList.toggle('active', b.dataset.cs === CS_TAB));
   const fm = ivs => ivs.map(i => i === 'P1' ? 'R' : DEG[i] || i).join(' ');
+  const semis = ivs => ivs.map(i => IV[i][0]), stack = ivs => semis(ivs).slice(1).map((s, k) => s - semis(ivs)[k]).join(' + ');
+  const qualRows = ids => ids.map(id => { const c = CHORDS[id]; return `<tr><td>${c.name.replace(/ \(.*\)/, '')} <span class="muted">C${c.sym}</span></td><td class="mono">${stack(c.iv)}</td><td class="mono">${semis(c.iv).join(' ')}</td></tr>`; }).join('');
   let h = '';
   if (CS_TAB === 'int') h = `<table><tr><th>Interval</th><th>Semis</th><th>From C</th></tr>${INTS.map(it => `<tr><td>${it.name}</td><td class="mono">${it.s}</td><td>${disp(tr('C', it.id === 'P8' ? 'P1' : it.id))}</td></tr>`).join('')}</table>
     <p>Inverting: numbers add to 9 (3rd↔6th), major↔minor, perfect stays perfect. 9th = 2nd, 11th = 4th, 13th = 6th.</p>`;
-  if (CS_TAB === 'chord') h = `<table><tr><th>Chord</th><th>Formula</th><th>On C</th></tr>${Object.entries(CHORDS).map(([id, c]) => `<tr><td title="${c.name}">C${c.sym}</td><td class="mono">${fm(c.iv)}</td><td>${listFmt(chordNotes('C', id))}</td></tr>`).join('')}</table>`;
+  if (CS_TAB === 'chord') h = `<table><tr><th>Chord</th><th>Formula</th><th>Half steps</th><th>On C</th></tr>${Object.entries(CHORDS).map(([id, c]) => `<tr><td title="${c.name}">C${c.sym}</td><td class="mono">${fm(c.iv)}</td><td class="mono">${stack(c.iv)}</td><td>${listFmt(chordNotes('C', id))}</td></tr>`).join('')}</table>`;
   if (CS_TAB === 'scale') h = `<table><tr><th>Scale</th><th>Steps</th><th>Formula</th></tr>${Object.entries(SCALES).map(([id, s]) => `<tr><td>${s.name}</td><td class="mono">${stepPattern(id)}</td><td class="mono">${s.iv.map(i => DEG[i]).join(' ')}</td></tr>`).join('')}</table>
     <p>Modes vs major/minor: Dorian ♮6 · Phrygian ♭2 · Lydian ♯4 · Mixolydian ♭7 · Locrian ♭2 ♭5.</p>`;
-  if (CS_TAB === 'key') h = `<table>
+  if (CS_TAB === 'key') h = `<table class="cs-qual"><tr><th>Triad</th><th>Half steps</th><th>From root</th></tr>${qualRows(TRIADS)}
+      <tr><th>7th chord</th><th>Half steps</th><th>From root</th></tr>${qualRows(SEVENTHS)}</table>
+    <p>Major 3rd = 4 half steps, minor 3rd = 3. A triad is two 3rds stacked; a 7th chord adds a third 3rd on top.</p>
+    <table>
       <tr><th>Key</th><th>Triads</th></tr>
       <tr><td>Major</td><td>I ii iii IV V vi vii°</td></tr>
       <tr><td>Major 7ths</td><td>Imaj7 ii7 iii7 IVmaj7 V7 vi7 viiø7</td></tr>
