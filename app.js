@@ -59,7 +59,12 @@ let LABEL_MODE = store.get('labels', 'both');
 const ALL_PIANOS = [];
 // Right-click a key to leave it marked (on every keyboard) until it is right-clicked again. Marks survive questions and page changes.
 const PINS = new Set();
-function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; }
+function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; pinName(); }
+// The keyboard bar names whatever the marked keys spell: a note, an interval or a chord.
+function pinName() {
+  const el = $('#dkName'); if (!el) return; const n = PINS.size ? nameNotes([...PINS]) : null;
+  el.innerHTML = n ? `<b>${n.name}</b>${n.detail ? `<small>${n.detail}</small>` : ''}` : ''; el.classList.toggle('hidden', !n);
+}
 function togglePin(m) { if (PINS.has(m)) PINS.delete(m); else { PINS.add(m); Snd.note(m); } syncPins(); }
 class Piano {
   constructor(el) { this.el = el; this.selectable = false; this.selected = new Set(); this.keys = {}; this.hidden = false; this.build(); ALL_PIANOS.push(this); }
@@ -1087,7 +1092,7 @@ function setKey(root, type, fromQuestion = false) {
   KEYSEL.q = fromQuestion; // a key that came from a question is cleared when you leave Practice
   KEYSEL.root = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; KEYSEL.type = type; store.set('pianoKey', KEYSEL);
   $('#dkRoot').value = KEYSEL.root; $('#dkType').value = type; $('#dock').classList.toggle('keyed', type !== 'off');
-  ALL_PIANOS.forEach(p => p.refresh());
+  ALL_PIANOS.forEach(p => p.refresh()); pinName();
   if (typeof roll !== 'undefined' && (roll.sroot !== KEYSEL.root || roll.stype !== type)) roll.setScale(KEYSEL.root, type);
 }
 let dkMsgT = 0;
