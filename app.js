@@ -616,6 +616,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'r') Snd.play(S.q.audio);
   else if (k === 'h') hint();
   else if (k === 'l') toggleLessonPeek();
+  else if (k === 'k' && TOOLS.roll) roll.keyFromQuestion();
 });
 
 // =====================================================================
@@ -806,7 +807,7 @@ class PianoRoll {
   constructor(el) {
     this.el = el; this.cols = 32; this.notes = []; this.len = 4; this.timer = null; this.step = 0; this.cells = {};
     this.follow = store.get('rollFollow', true); this.sroot = 'C'; this.stype = 'off';
-    const stypes = ['off', 'major', 'minor', 'harmonicMinor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'majorPent', 'minorPent', 'blues'];
+    const stypes = ['off', ...Object.keys(SCALES)];
     el.innerHTML = `<div class="pr-ctl">
         <button data-a="play" class="primary">▶ Play</button>
         <button data-a="clear">Clear</button>
@@ -814,7 +815,8 @@ class PianoRoll {
         <label title="Automatically load each question's notes (and the answer once you've answered)"><input type="checkbox" data-a="follow" ${this.follow ? 'checked' : ''}> Follow quiz</label>
         <label>Note <select data-a="len"><option value="1">1/16</option><option value="2">1/8</option><option value="4" selected>1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
         <label>BPM <input type="number" data-a="bpm" value="120" min="40" max="240"></label>
-        <label title="Shade the rows that belong to a scale, like Ableton's Scale mode">Scale <select data-a="sroot">${ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
+        <label title="Shade the rows that belong to a scale, like Ableton's Scale mode">Scale <select data-a="sroot">${ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
+        <button data-a="qkey" class="qkey" title="Set the scale to the current question's key (K)">🎯 Key from question <kbd>K</kbd></button>
       </div>
       <div class="pr-scroll"><div class="pr-grid"></div></div>
       <div class="pr-hint">Click the grid to add/remove notes. 1 row = 1 semitone; 12 rows = an octave. 2 bars of 1/16 steps. Green notes came from the question.</div>`;
@@ -840,6 +842,7 @@ class PianoRoll {
     ctl('bpm').onchange = () => { if (this.timer) { this.stop(); this.play(); } };
     ctl('sroot').onchange = e => { this.sroot = e.target.value; this.applyScale(); };
     ctl('stype').onchange = e => { this.stype = e.target.value; this.applyScale(); };
+    ctl('qkey').onclick = () => this.keyFromQuestion();
     this.bpmEl = ctl('bpm'); this.playBtn = ctl('play');
   }
   msg(t) { this.hintEl.innerHTML = t; clearTimeout(this.mt); this.mt = setTimeout(() => this.hintEl.innerHTML = this.hintText, 3500); }
@@ -862,8 +865,19 @@ class PianoRoll {
       const p = +m % 12; row.forEach(d => { d.classList.toggle('inscale', pcs.has(p)); d.classList.toggle('sroot', this.stype !== 'off' && p === r); });
     }
   }
+  keyFromQuestion() {
+    if (!S.q) return this.msg('Start a question first.');
+    const k = questionKey(S.q, S.answered);
+    if (k && k.ear) return this.msg('Ear-training question: answer first (the key would give it away).');
+    if (!k) return this.msg('This question isn\'t in a particular key. Pick a scale yourself, or answer first and try again.');
+    this.setScale(k.root, k.type);
+    const how = { question: 'named in the question', answer: 'from the answer', notes: 'best fit for the question\'s notes' }[k.src];
+    this.msg(`Scale set to <b>${disp(this.sroot)} ${SCALES[k.type].name}</b> (${how}). Shaded rows are in the scale; the teal rows are the root.`);
+    const row = this.cells[Object.keys(this.cells).map(Number).filter(m => m % 12 === pc(this.sroot) && m >= 60).sort((x, y) => x - y)[0]];
+    if (row) this.scroller.scrollTo({ top: Math.max(0, row[0].offsetTop - 120), behavior: 'smooth' });
+  }
   setScale(root, type) {
-    this.sroot = ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; this.stype = type;
+    this.sroot = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; this.stype = type;
     this.el.querySelector('[data-a="sroot"]').value = this.sroot; this.el.querySelector('[data-a="stype"]').value = type; this.applyScale();
   }
   load(q, answered, manual) {
@@ -894,6 +908,57 @@ class PianoRoll {
     tick(); this.timer = setInterval(tick, stepMs);
   }
   stop() { clearInterval(this.timer); this.timer = null; this.head.classList.add('hidden'); this.playBtn.textContent = '▶ Play'; }
+}
+
+// ---- key of a question (for the piano roll's "Key from question" button) ----
+// 1) a key named in the prompt ("in E♭ major", "key is C minor", "D Dorian"), preferring phrases that set a key;
+// 2) once answered, a key named in the correct option; 3) otherwise the scale that best fits the question's notes.
+// Ear-training notes are never used before you answer, so the button can't give the answer away.
+const KEY_WORDS = [['natural minor', 'minor'], ['harmonic minor', 'harmonicMinor'], ['melodic minor', 'melodicMinor'], ['major pentatonic', 'majorPent'], ['minor pentatonic', 'minorPent'],
+  ['phrygian dominant', 'phrygianDominant'], ['hungarian minor', 'hungarianMinor'], ['double harmonic', 'doubleHarmonic'], ['whole tone', 'wholeTone'], ['whole-tone', 'wholeTone'],
+  ['blues scale', 'blues'], ['blues', 'blues'], ['hirajoshi', 'hirajoshi'], ['dorian', 'dorian'], ['phrygian', 'phrygian'], ['lydian', 'lydian'], ['mixolydian', 'mixolydian'],
+  ['locrian', 'locrian'], ['ionian', 'major'], ['aeolian', 'minor'], ['major', 'major'], ['minor', 'minor']];
+const KEY_RE = new RegExp(`(^|[^A-Za-z])([A-G])([♯♭#b]?)\\s+(${KEY_WORDS.map(([w]) => w.replace(/(^|[\s-])([a-z])/g, (m, s, c) => `${s}[${c.toUpperCase()}${c}]`)).join('|')})(?![A-Za-z])(?!\\s+\\d)`, 'g');
+const plain = h => String(h || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
+function keysInText(text) {
+  const out = [], t = plain(text); let m; KEY_RE.lastIndex = 0;
+  while ((m = KEY_RE.exec(t))) {
+    const word = m[4].toLowerCase(), type = KEY_WORDS.find(([w]) => w === word)[1];
+    const before = t.slice(0, m.index + m[1].length), root = m[2] + m[3].replace('♯', '#').replace('♭', 'b');
+    out.push({ root, type, strong: /(\bin(\s+the\s+key\s+of)?|\bkey\s+(of|is)|\binto|\()\s*$/i.test(before) || !['major', 'minor'].includes(type) });
+  }
+  return out;
+}
+function fitKey(evs) {
+  const all = evs.flatMap(e => e.notes), pcs = new Set(all.map(m => m % 12)); if (pcs.size < 2) return null;
+  const bass = Math.min(...all) % 12, first = Math.min(...evs[0].notes) % 12, isScale = pcs.size >= 5;
+  if (pcs.size <= 4) { // a chord: use its root
+    const c = findChords(pcs)[0];
+    if (c) { const type = CHORDS[c.id].iv.includes('m3') ? 'minor' : 'major'; if ([...pcs].every(p => scaleSemis(type).includes((p - c.r + 12) % 12))) return { root: DEFAULT_NAMES[c.r], type }; }
+  }
+  const ORDERED = ['major', 'minor', 'harmonicMinor', 'melodicMinor', 'dorian', 'mixolydian', 'phrygian', 'lydian', 'locrian', 'majorPent', 'minorPent', 'blues', ...Object.keys(SCALES)].filter((x, i, a) => a.indexOf(x) === i).slice(0, isScale ? 99 : 3); // a chord or interval: stick to major / minor keys
+  let best = null;
+  for (let r = 0; r < 12; r++) ORDERED.forEach((type, ti) => {
+    const set = scaleSemis(type).map(s => (s + r) % 12); if (![...pcs].every(p => set.includes(p))) return;
+    const score = (set.length === pcs.size ? 1000 : 0) - set.length * 20 + (isScale && r === first ? 300 : 0) - ti * 10 + (pcs.has(r) ? 40 : 0) + (r === bass ? 25 : 0) + (r === first ? 10 : 0);
+    if (!best || score > best.score) best = { root: DEFAULT_NAMES[r], type, score };
+  });
+  return best && { root: best.root, type: best.type };
+}
+const ROLL_ROOTS = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+function questionKey(q, answered) {
+  const ks = keysInText(q.prompt), strong = ks.find(k => k.strong);
+  if (strong) return Object.assign(strong, { src: 'question' });
+  if (answered && q.type === 'mc' && q.options) { const a = keysInText(q.options[q.answer])[0]; if (a) return Object.assign(a, { src: 'answer' }); }
+  if (ks.length) return Object.assign(ks[0], { src: 'question' });
+  if (/^ear/.test(q.topic) && !answered) return { ear: true };
+  let evs = q.audio ? q.audio.slice() : [];
+  const add = src => { if (src && src.length) evs.push({ t: 0, notes: mids(src), d: 1 }); };
+  add(q.show); if (answered) add(q.reveal);
+  evs = evs.filter(e => e.notes && e.notes.length);
+  const k = evs.length && fitKey(evs);
+  if (k) { const named = [...(q.show || []), ...(answered && q.reveal ? q.reveal : [])].map(n => typeof n === 'string' ? n : n.label).concat((plain(q.prompt).match(/[A-G][♯♭]?(?![a-z])/g) || []).map(n => n.replace('♯', '#').replace('♭', 'b'))).find(n => n && pc(n) === pc(k.root)); if (named) k.root = named.replace(/\d+$/, ''); }
+  return k ? Object.assign(k, { src: 'notes' }) : null;
 }
 
 // ---- circle & keys tool ----
