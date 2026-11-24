@@ -1198,8 +1198,8 @@ function layoutTools(keep) {
   document.body.classList.toggle('tools-side', visible && open.length > 0 && window.innerWidth >= 900);
   if (visible && open.length) {
     const stacked = window.innerWidth < 900, GAP = 12;
-    const avail = Math.max(120, main.clientHeight - $('#toolbar').offsetHeight - parseFloat(getComputedStyle(play).paddingTop) - 36);
-    play.style.setProperty('--side-h', avail + 'px'); play.style.setProperty('--tb-h', $('#toolbar').offsetHeight + 'px');
+    const avail = Math.max(120, main.clientHeight - parseFloat(getComputedStyle(play).paddingTop) - 30);
+    play.style.setProperty('--side-h', avail + 'px'); play.style.setProperty('--tb-h', '10px');
     play.classList.remove('two'); SIDE.forEach(k => { A.appendChild(toolEl(k)); toolEl(k).classList.remove('collapsed'); toolEl(k).querySelector('.tool-body').style.maxHeight = ''; });
     const first = toolEl(open[0]); first.classList.add('collapsed'); const HEAD = first.offsetHeight; first.classList.remove('collapsed');
     const H = {}; open.forEach(k => { H[k] = toolEl(k).offsetHeight; AUTO[k] = false; });
@@ -1248,6 +1248,10 @@ $$('#toolbar button[data-tool]').forEach(b => b.onclick = () => {
 });
 $('#toolsClose').onclick = () => { ALLT.forEach(k => TOOLS[k] = false); applyTools(); };
 $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = false; applyTools(); });
+// The tools bar lives in the top bar and only shows while a question session is on screen.
+const syncToolbar = () => { const on = TAB === 'quiz' && !$('#play').classList.contains('hidden'); $('#toolbar').classList.toggle('hidden', !on); document.body.classList.toggle('in-play', on); };
+new MutationObserver(syncToolbar).observe($('#play'), { attributes: true, attributeFilter: ['class'] });
+new MutationObserver(syncToolbar).observe($('#tab-quiz'), { attributes: true, attributeFilter: ['class'] });
 let toolsRaf = 0;
 new ResizeObserver(() => { cancelAnimationFrame(toolsRaf); toolsRaf = requestAnimationFrame(() => layoutTools()); }).observe($('#main'));
 

@@ -21,6 +21,18 @@
       <button class="tab" data-tab="explore" role="tab">Explorer</button>
       <button class="tab" data-tab="stats" role="tab">Progress</button>
     </nav>
+    <div class="toolbar hidden" id="toolbar" role="toolbar" aria-label="Learning tools">
+          
+          <button data-tool="piano" aria-pressed="false">Piano</button>
+          <button data-tool="roll" aria-pressed="false">Piano roll</button>
+          <button data-tool="circle" aria-pressed="false">Circle</button>
+          <button data-tool="finder" aria-pressed="false">Chord finder</button>
+          <button data-tool="tempo" aria-pressed="false">Tempo</button>
+          <button data-tool="cheat" aria-pressed="false">Cheat sheet</button>
+          <button id="toolsClose" class="hidden" title="Close every open tool">✕ Close all</button>
+          <span class="grow"></span>
+          <button id="focusBtn" data-focus aria-pressed="false" title="Hide everything except the question (F)">Focus <kbd>F</kbd></button>
+        </div>
     <button id="statusPill" class="status" title="Your level and today's goal. Click for Progress."></button>
   </div></header>
 
@@ -90,18 +102,6 @@
 
       <!-- play -->
       <div id="play" class="wrap play hidden">
-        <div class="toolbar" id="toolbar" role="toolbar" aria-label="Learning tools">
-          <span class="toolbar-label">Tools</span>
-          <button data-tool="piano" aria-pressed="false">🎹 Piano</button>
-          <button data-tool="roll" aria-pressed="false">▦ Piano roll</button>
-          <button data-tool="circle" aria-pressed="false">◎ Circle &amp; keys</button>
-          <button data-tool="finder" aria-pressed="false">🔍 Chord finder</button>
-          <button data-tool="tempo" aria-pressed="false">⏱ Tempo</button>
-          <button data-tool="cheat" aria-pressed="false">📋 Cheat sheet</button>
-          <button id="toolsClose" class="hidden" title="Close every open tool">✕ Close all</button>
-          <span class="grow"></span>
-          <button id="focusBtn" data-focus aria-pressed="false" title="Hide everything except the question (F)">🎯 Focus <kbd>F</kbd></button>
-        </div>
         <div id="breakBanner" class="breakbar hidden" role="status"></div>
 
         <div class="play-layout">

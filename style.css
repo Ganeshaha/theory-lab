@@ -200,7 +200,7 @@ details.more[open] { display: block; margin-top: 6px; }
 .breakbar { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3) var(--s4); margin-bottom: var(--s3); border-radius: var(--r); background: rgba(34, 211, 238, .08); border: 1px solid rgba(34, 211, 238, .3); font-size: 14px; }
 .breakbar .grow { flex: 1; }
 .toolbar .grow { flex: 1; }
-body.focus .topbar, body.focus .tools-col, body.focus #tool-roll, body.focus .toolbar button:not([data-focus]), body.focus .toolbar-label, body.focus #qTopic { display: none !important; }
+body.focus.in-play .brand, body.focus.in-play .tabs, body.focus.in-play .status, body.focus .tools-col, body.focus #tool-roll, body.focus .toolbar button:not([data-focus]), body.focus .toolbar-label, body.focus #qTopic { display: none !important; }
 body.focus .with-side .play-layout { grid-template-columns: minmax(0, 1fr); }
 body.focus .wrap.play { max-width: 760px; padding-top: var(--s6); }
 body.focus #qPrompt { font-size: 24px; }
@@ -783,3 +783,25 @@ button.primary:hover { background: linear-gradient(180deg, #a78dff, #8869fb); }
 .csbody .cs-all td.mono { white-space: normal; }
 .csbody .cs-all td:first-child { white-space: nowrap; }
 .stats-top { align-items: stretch; } .stats-top .tile { padding: var(--s3) var(--s5); }
+
+/* ============ compact practice: tools live in the top bar, tighter vertical rhythm ============ */
+.topbar-in { padding: 6px var(--s5); gap: var(--s4); flex-wrap: wrap; row-gap: 6px; }
+body.in-play .topbar-in { max-width: 1760px; }
+.topbar .toolbar { position: static; flex: 1; min-width: 0; margin: 0; padding: 0; background: none; flex-wrap: nowrap; gap: 5px; }
+.topbar .toolbar button { white-space: nowrap; }
+.topbar .status { margin-left: 0; }
+.topbar-in > .tabs + .status, .topbar-in > .toolbar.hidden + .status { margin-left: auto; }
+body.focus .topbar-in { justify-content: flex-end; }
+.wrap.play { padding-top: var(--s3); padding-bottom: var(--s4); }
+body.focus .wrap.play { padding-top: var(--s4); }
+.progress { margin: 6px 0 var(--s3); }
+.qcard { padding: var(--s4) var(--s5) var(--s4); }
+#qOpts { margin-top: var(--s4); }
+#qOpts button { min-height: 48px; padding: 10px 16px; }
+.learnrow { margin-top: var(--s3); }
+.pianoctl { margin-top: var(--s4); }
+.tool { padding: var(--s2) var(--s4) var(--s3); }
+.tool-head { margin-bottom: 4px; }
+.topbar .toolbar { flex: 1 0 auto; }
+@media (max-width: 1500px) { body.in-play .brand { font-size: 0; gap: 0; } body.in-play .tab { padding: 6px 10px; } body.in-play .topbar-in { gap: var(--s3); } }
+@media (max-width: 1400px) { body.in-play .status > span:nth-child(2), body.in-play .status .sep { display: none; } }
