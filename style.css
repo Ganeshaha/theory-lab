@@ -732,3 +732,16 @@ button.primary:hover { background: linear-gradient(180deg, #a78dff, #8869fb); }
 .stats-top .heat { margin: 0; grid-template-rows: repeat(7, 12px); } .stats-top .heat i { width: 12px; }
 .pr-ctl .qkey { border-color: rgba(34, 211, 238, .45); color: #bdf3fb; }
 .pr-ctl .qkey:hover { background: rgba(34, 211, 238, .1); }
+
+/* piano roll: clear key highlighting */
+.pr-keyinfo { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.pr-grid.scaled .pr-cell { background: #0b0d12; }
+.pr-grid.scaled .pr-cell.inscale { background: rgba(139, 108, 255, .17); }
+.pr-grid.scaled .pr-cell.sroot { background: rgba(34, 211, 238, .26); }
+.pr-grid.scaled .pr-key { opacity: .45; }
+.pr-grid.scaled .pr-key.inscale { opacity: 1; background: #d9d1ff; color: #2a1f66; font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+.pr-grid.scaled .pr-key.b.inscale { background: #4a3aa8; color: #fff; }
+.pr-grid.scaled .pr-key.sroot { background: #67e3f5; color: #06323a; box-shadow: inset 3px 0 0 #0e9fb6; }
+.pr-key[data-deg]::after { content: attr(data-deg); float: right; padding-right: 4px; font-size: 8.5px; opacity: .75; }
+.pr-grid.scaled .pr-cell.on { background: var(--accent); }
+.pr-grid.scaled .pr-cell.on.ghost { background: rgba(74, 222, 128, .8); }

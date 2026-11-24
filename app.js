@@ -815,9 +815,10 @@ class PianoRoll {
         <label title="Automatically load each question's notes (and the answer once you've answered)"><input type="checkbox" data-a="follow" ${this.follow ? 'checked' : ''}> Follow quiz</label>
         <label>Note <select data-a="len"><option value="1">1/16</option><option value="2">1/8</option><option value="4" selected>1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
         <label>BPM <input type="number" data-a="bpm" value="120" min="40" max="240"></label>
-        <label title="Shade the rows that belong to a scale, like Ableton's Scale mode">Scale <select data-a="sroot">${ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
+        <label title="Highlight the notes of a key or scale, like Ableton's Scale mode">Key <select data-a="sroot">${ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
         <button data-a="qkey" class="qkey" title="Set the scale to the current question's key (K)">🎯 Key from question <kbd>K</kbd></button>
       </div>
+      <div class="pr-keyinfo"></div>
       <div class="pr-scroll"><div class="pr-grid"></div></div>
       <div class="pr-hint">Click the grid to add/remove notes. 1 row = 1 semitone; 12 rows = an octave. 2 bars of 1/16 steps. Green notes came from the question.</div>`;
     const grid = el.querySelector('.pr-grid'); let html = '';
@@ -828,6 +829,8 @@ class PianoRoll {
     }
     grid.innerHTML = html + '<div class="pr-head hidden"></div>';
     grid.querySelectorAll('.pr-cell').forEach(d => { (this.cells[d.dataset.m] = this.cells[d.dataset.m] || [])[+d.dataset.c] = d; });
+    this.keyEls = {}; this.keyText = {}; grid.querySelectorAll('.pr-key').forEach(k => { this.keyEls[k.dataset.m] = k; this.keyText[k.dataset.m] = k.textContent; });
+    this.keyTitle = el.querySelector('.pr-keyinfo');
     this.head = grid.querySelector('.pr-head'); this.scroller = el.querySelector('.pr-scroll'); this.hintEl = el.querySelector('.pr-hint'); this.hintText = this.hintEl.innerHTML;
     grid.addEventListener('pointerdown', e => {
       const t = e.target; if (t.classList.contains('pr-key')) return Snd.note(+t.dataset.m);
@@ -843,7 +846,7 @@ class PianoRoll {
     ctl('sroot').onchange = e => { this.sroot = e.target.value; this.applyScale(); };
     ctl('stype').onchange = e => { this.stype = e.target.value; this.applyScale(); };
     ctl('qkey').onclick = () => this.keyFromQuestion();
-    this.bpmEl = ctl('bpm'); this.playBtn = ctl('play');
+    this.bpmEl = ctl('bpm'); this.playBtn = ctl('play'); this.applyScale();
   }
   msg(t) { this.hintEl.innerHTML = t; clearTimeout(this.mt); this.mt = setTimeout(() => this.hintEl.innerHTML = this.hintText, 3500); }
   toggle(m, c) {
@@ -860,10 +863,16 @@ class PianoRoll {
     }
   }
   applyScale() {
-    const pcs = this.stype === 'off' ? new Set() : new Set(scaleNotes(this.sroot, this.stype).map(pc)), r = pc(this.sroot);
+    const on = this.stype !== 'off', notes = on ? scaleNotes(this.sroot, this.stype) : [], pcs = new Set(notes.map(pc)), r = pc(this.sroot);
+    const deg = on ? Object.fromEntries(notes.map((n, i) => [pc(n), DEG[SCALES[this.stype].iv[i]] || i + 1])) : {};
+    this.el.querySelector('.pr-grid').classList.toggle('scaled', on);
     for (const [m, row] of Object.entries(this.cells)) {
-      const p = +m % 12; row.forEach(d => { d.classList.toggle('inscale', pcs.has(p)); d.classList.toggle('sroot', this.stype !== 'off' && p === r); });
+      const p = +m % 12, ins = pcs.has(p), root = on && p === r;
+      row.forEach(d => { d.classList.toggle('inscale', ins); d.classList.toggle('sroot', root); });
+      const k = this.keyEls[m]; k.classList.toggle('inscale', ins); k.classList.toggle('sroot', root);
+      k.textContent = ins && p !== 0 ? disp(notes.find(n => pc(n) === p)) : this.keyText[m]; if (ins) k.dataset.deg = deg[p]; else delete k.dataset.deg;
     }
+    this.keyTitle.textContent = on ? `${disp(this.sroot)} ${SCALES[this.stype].name}: ${notes.map(disp).join(' ')}` : 'No key selected: pick one to highlight its notes';
   }
   keyFromQuestion() {
     if (!S.q) return this.msg('Start a question first.');
