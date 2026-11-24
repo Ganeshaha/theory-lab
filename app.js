@@ -832,7 +832,7 @@ class PianoRoll {
         <label>Note <select data-a="len"><option value="1">1/16</option><option value="2">1/8</option><option value="4" selected>1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
         <label>BPM <input type="number" data-a="bpm" value="120" min="40" max="240"></label>
         <label title="Highlight the notes of a key or scale, like Ableton's Scale mode">Key <select data-a="sroot">${ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
-        <button data-a="qkey" class="qkey" title="Set the scale to the current question's key (K)">🎯 Key from question <kbd>K</kbd></button>
+        <button data-a="qkey" class="qkey" title="Set the scale to the current question's key (K)">Question key <kbd>K</kbd></button>
       </div>
       <div class="pr-keyinfo"></div>
       <div class="pr-scroll"><div class="pr-grid"></div></div>
@@ -929,7 +929,7 @@ class PianoRoll {
   stop() { clearInterval(this.timer); this.timer = null; this.head.classList.add('hidden'); this.playBtn.textContent = '▶ Play'; }
 }
 
-// ---- key of a question (for the piano roll's "Key from question" button) ----
+// ---- key of a question (for the "Question key" buttons) ----
 // 1) a key named in the prompt ("in E♭ major", "key is C minor", "D Dorian"), preferring phrases that set a key;
 // 2) once answered, a key named in the correct option; 3) otherwise the scale that best fits the question's notes.
 // Ear-training notes are never used before you answer, so the button can't give the answer away.
