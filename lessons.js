@@ -33,7 +33,7 @@ const LESSONS = {
   },
   sevenths: {
     idea: 'Add another 3rd on top of a triad and you get a <b>7th chord</b>: richer and smoother.',
-    points: ['<b>maj7</b> = dreamy. <b>7</b> (dominant) = wants to resolve, found on V. <b>m7</b> = smooth, very house/lo-fi.', '<b>ø7</b> (m7♭5) = dark, sits on vii.', 'Major key 7ths: Imaj7 ii7 iii7 IVmaj7 V7 vi7 viiø7.'],
+    points: ['<b>maj7</b> (major 7th) = dreamy. <b>7</b> (dominant 7th) = wants to resolve, found on V. <b>m7</b> (minor 7th) = smooth, very house/lo-fi.', '<b>ø7</b> (half-diminished 7th, also written m7♭5) = dark, sits on vii. <b>°7</b> (fully diminished 7th) = tense.', 'Major key 7ths: Imaj7 ii7 iii7 IVmaj7 V7 vi7 viiø7.'],
     demo: { seq: [['C', 'E', 'G', 'B'], ['A', 'C', 'E', 'G'], ['D', 'F', 'A', 'C'], ['G', 'B', 'D', 'F']] },
     tip: 'Swap triads for 7ths in your progression for instant deep-house colour.',
   },

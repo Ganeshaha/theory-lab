@@ -490,7 +490,7 @@ G.sevenths = [
   () => {
     const r = R.pick(ROOTS), c = chordNotes(r, 'mM7');
     return Q({
-      prompt: `The "<b>Psycho Chord</b>" is a minor triad with a major 7th (mM7). Which notes make <b>${disp(r)}m(maj7)</b>?`,
+      prompt: `The <b>minor-major 7th</b> chord, the book's "Psycho Chord", is a minor triad with a major 7th. Which notes make <b>${disp(r)}m(maj7)</b>?`,
       ...listMC(c, ['min7', 'maj7', 'dom7', 'hdim7'].map(t => chordNotes(r, t))), reveal: voice(c), audio: EV.arpChord(mids(voice(c))),
       explain: `${disp(r)} minor (${listFmt(c.slice(0, 3))}) + major 7th ${disp(c[3])}. It never shows up in the diatonic progression; it's an unusual, tense sound (think Bernard Herrmann's Psycho score).`,
     });

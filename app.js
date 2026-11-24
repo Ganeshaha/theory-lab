@@ -892,7 +892,9 @@ function nameNotes(ms) {
   const all = findChords(pcs), c = all.find(x => x.r === bass) || all[0];
   if (!c) return { name: 'No common name', detail: spelled };
   const tones = CHORDS[c.id].iv.map(i => (c.r + IV[i][0]) % 12), inv = tones.indexOf(bass);
-  return { name: nm(c.r) + CHORDS[c.id].sym + (inv > 0 ? '/' + nm(bass) : ''), detail: `${nm(c.r)} ${c.full.replace(/ \(.*\)/, '')}${inv > 0 ? ` · ${ORD[inv - 1]} inversion` : ''} · ${spelled}` };
+  const rootName = K && K.byPc[c.r] ? K.byPc[c.r].name : DEFAULT_NAMES[c.r], cn = chordNotes(rootName, c.id);
+  const sp = p => { const n = cn.find(x => pc(x) === p % 12); return n && !/bb|##|x|^(E#|B#|Cb|Fb)$/.test(n) ? disp(n) : nm(p); };
+  return { name: nm(c.r) + CHORDS[c.id].sym + (inv > 0 ? '/' + sp(bass) : ''), detail: `${nm(c.r)} ${c.full.replace(/ \(.*\)/, '')}${inv > 0 ? ` · ${ORD[inv - 1]} inversion` : ''} · ${[...new Set(ms.map(sp))].join(' – ')}` };
 }
 class PianoRoll {
   constructor(el) {
@@ -1192,8 +1194,9 @@ function renderCheat() {
       let hit = '';
       if (whole) hit = el.outerHTML;
       else if (el.tagName === 'TABLE') {
-        const rows = [...el.rows].filter(r => r.cells[0].tagName !== 'TH' && has(r)), th = el.rows[0].cells[0].tagName === 'TH' ? el.rows[0].outerHTML : '';
-        if (rows.length) hit = `<table class="${el.className}">${th}${rows.map(r => r.outerHTML).join('')}</table>`;
+        let th = '', used = null, body = ''; // each matching row keeps the header row it sits under
+        [...el.rows].forEach(r => { if (r.cells[0].tagName === 'TH') { th = r.outerHTML; return; } if (has(r)) { if (used !== th) { body += th; used = th; } body += r.outerHTML; } });
+        if (body) hit = `<table class="${el.className}">${body}</table>`;
       } else if (has(el)) hit = el.outerHTML;
       if (hit) { part += head + hit; head = ''; }
     });
@@ -1220,8 +1223,9 @@ function cheatHTML(CS_TAB) {
     <p>Major 3rd = 4 half steps, minor 3rd = 3. A triad is two 3rds stacked; a 7th chord adds a third 3rd on top.</p>
     ${H('Every chord: symbol, name, formula')}
     <table class="cs-all"><tr><th>Symbol</th><th>Name</th><th>Formula</th><th>Half steps</th></tr>${Object.values(CHORDS).map(c => `<tr><td>C${c.sym}</td><td>${short(c.name)}</td><td class="mono">${fm(c.iv)}</td><td class="mono">${stack(c.iv)}</td></tr>`).join('')}</table>
-    ${H('Reading symbols')}${dl([['m', 'minor (Cm). No letter after the root means major.'], ['°', 'diminished (C°): minor 3rd + flat 5th.'], ['ø', 'half-diminished (Cø7), also written m7♭5.'], ['+', 'augmented (C+): major 3rd + sharp 5th.'],
-      ['7', 'dominant 7th: major triad + ♭7. "maj7" uses the natural 7th instead.'], ['sus', 'the 3rd is replaced by the 2nd (sus2) or 4th (sus4).'], ['add9', 'triad + 9th, no 7th. A plain "9" chord includes the ♭7.'], ['5', 'power chord: root and 5th only.']])}
+    ${H('Reading symbols')}${dl([['m', 'minor (Cm). No letter after the root means major.'], ['°', 'diminished (C°): minor 3rd + flat 5th.'], ['+', 'augmented (C+): major 3rd + sharp 5th.'],
+      ['maj7', 'major 7th (Cmaj7): major triad + major 7th.'], ['7', 'dominant 7th (C7): major triad + minor 7th (♭7).'], ['m7', 'minor 7th (Cm7): minor triad + minor 7th.'],
+      ['ø7', 'half-diminished 7th (Cø7): diminished triad + minor 7th. Also written m7♭5.'], ['°7', 'fully diminished 7th (C°7): diminished triad + diminished 7th (𝄫7).'], ['m(maj7)', 'minor-major 7th (Cm(maj7)): minor triad + major 7th.'], ['sus', 'the 3rd is replaced by the 2nd (sus2) or 4th (sus4).'], ['add9', 'triad + 9th, no 7th. A plain "9" chord includes the ♭7.'], ['5', 'power chord: root and 5th only.']])}
     ${H('Inversions and slash chords')}
     <table><tr><th>Position</th><th>In the bass</th><th>C major</th><th>Written</th></tr>${rows([['Root position', 'root', 'C – E – G', 'C'], ['1st inversion', '3rd', 'E – G – C', 'C/E'], ['2nd inversion', '5th', 'G – C – E', 'C/G'], ['3rd inversion', '7th (7th chords)', 'B♭ – C – E – G', 'C7/B♭']])}</table>
     <p>A slash chord X/Y is chord X played over bass note Y.</p>
