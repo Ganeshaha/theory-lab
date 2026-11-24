@@ -4,6 +4,7 @@
    ===================================================================== */
 const Create = (() => {
   const CR = { root: 'C', mode: 'major', sev: false, slots: [], hist: [], playing: false, timer: null, nodes: [], loops: [], cur: -1, curL: null, mel: [], melOn: true };
+  let save = () => { };
 
   // Pads: [triad roman, 7th roman, description for colour chords]
   const PADS = {
@@ -136,7 +137,7 @@ const Create = (() => {
     if (CR.nodes.length > 400) CR.nodes = CR.nodes.filter(n => n.end > now);
   }
   function play() {
-    if (!CR.slots.length) return tip('Add some chords first: click the pads above, or hit 🎲 Inspire me.');
+    if (!CR.slots.length) return tip('Add some chords first: click the pads above, or hit Inspire me.');
     Snd.ensure(); CR.playing = true; CR.next = Snd.ctx.currentTime + 0.1; CR.loops = []; CR.cur = -1;
     scheduleLoop(); CR.timer = setInterval(tick, 30); $('#crPlay').textContent = '■ Stop';
   }
@@ -199,10 +200,10 @@ const Create = (() => {
       }
     });
     if (!CR.sev) opts.push({ sev: true, msg: 'Turned on <b>7th chords</b>: every chord gains a 4th note for a richer, deeper sound.' });
-    if (!opts.length) return tip('Nothing obvious to spice here. Try 🎲 Inspire me, or add a colour chord yourself.');
+    if (!opts.length) return tip('Nothing obvious to spice here. Try Inspire me, or add a colour chord yourself.');
     const o = R.pick(opts); pushHist();
     if (o.sev) { CR.sev = true; $('#crSev').checked = true; } else CR.slots[o.i] = pairFor(o.to);
-    render(); tip('✨ ' + o.msg, true);
+    render(); tip('' + o.msg, true);
   }
 
   // ---------------- UI ----------------
@@ -256,14 +257,14 @@ const Create = (() => {
   }
   function loadLib(p, msg) {
     pushHist(); CR.mode = p.mode; CR.sev = p.romans.some(r => /7/.test(r)); CR.slots = p.romans.map(pairFor);
-    spiceMsg = `${msg || '📂'} <b>${p.name}</b> (${progLabel(p.romans)}): ${p.why}`; render(); renderTips(true);
+    spiceMsg = `${msg ? msg + ' ' : ''}<b>${p.name}</b> (${progLabel(p.romans)}): ${p.why}`; render(); renderTips(true);
     requestAnimationFrame(() => $('#crSlots').scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
   }
   function load({ tonic, mode, romans }) {
     stop(); CR.root = ROOTS.includes(tonic) ? tonic : DEFAULT_NAMES[pc(tonic)]; CR.mode = mode;
     const lib = PROG_LIB.find(p => p.mode === mode && p.romans.join() === romans.join());
-    if (lib) loadLib(lib, '🎓 From your practice:');
-    else { pushHist(); CR.sev = romans.some(r => /7/.test(r)); CR.slots = romans.map(pairFor); spiceMsg = `🎓 From your practice: ${progLabel(romans)} in ${keyName(CR.root, mode)}.`; render(); renderTips(true); }
+    if (lib) loadLib(lib, 'From your practice:');
+    else { pushHist(); CR.sev = romans.some(r => /7/.test(r)); CR.slots = romans.map(pairFor); spiceMsg = `From your practice: ${progLabel(romans)} in ${keyName(CR.root, mode)}.`; render(); renderTips(true); }
     showTab('create');
   }
 
@@ -280,6 +281,7 @@ const Create = (() => {
   const barChordPcs = () => CR.slots.map(s => { const c = chordOf(cur(s)); return new Set(chordNotes(c.root, c.type).map(pc)); });
   const leadNote = row => { Snd.ensure(); synth(rowMidi(row), Snd.ctx.currentTime + 0.01, 0.3, 0.2, 'lead'); };
   function renderMel() {
+    save();
     const el = $('#crMel'), cols = melCols();
     if (!cols) { el.innerHTML = '<span class="muted small">Add chords first.</span>'; $('#melStat').textContent = ''; return; }
     const names = scaleNotes(CR.root, scaleId()), cp = barChordPcs();
@@ -315,7 +317,7 @@ const Create = (() => {
       });
     }
     CR.mel = out; CR.melOn = true; $('#melOn').checked = true; render();
-    tip('🎲 Melody idea: one short <b>motif</b> (rhythm and shape) repeated over each chord, landing on <b>chord tones</b> on beats 1 and 3, with a long note to finish. Now make it yours: move a note, or delete a few for space.', true);
+    tip('Melody idea: one short <b>motif</b> (rhythm and shape) repeated over each chord, landing on <b>chord tones</b> on beats 1 and 3, with a long note to finish. Now make it yours: move a note, or delete a few for space.', true);
     if (CR.playing) { stop(); } play();
   }
 
@@ -370,7 +372,7 @@ const Create = (() => {
   $('#crPlay').onclick = () => CR.playing ? stop() : play();
   $('#crClear').onclick = () => { pushHist(); CR.slots = []; spiceMsg = ''; render(); };
   $('#crUndo').onclick = () => { const h = CR.hist.pop(); if (!h) return; const o = JSON.parse(h); CR.slots = o.slots; CR.sev = o.sev; CR.mode = o.mode; if (o.mel) CR.mel = o.mel; render(); };
-  $('#crInspire').onclick = () => { const pool = PROG_LIB.filter(p => p.mode === CR.mode && p.romans.join() !== CR.slots.map(cur).join()); loadLib(R.pick(pool), '🎲'); if (!CR.playing) play(); };
+  $('#crInspire').onclick = () => { const pool = PROG_LIB.filter(p => p.mode === CR.mode && p.romans.join() !== CR.slots.map(cur).join()); loadLib(R.pick(pool), ''); if (!CR.playing) play(); };
   $('#crSpice').onclick = () => spice();
   $('#crExport').onclick = () => exportMidi();
   $('#melOn').onchange = e => { CR.melOn = e.target.checked; restartIfPlaying(); };
@@ -393,6 +395,19 @@ const Create = (() => {
   $('#chReveal').onclick = () => chReveal();
   ['#crBpm', '#crTimbre', '#crRhythm', '#crBass', '#crDrums', '#crLead'].forEach(s => $(s).addEventListener('change', restartIfPlaying));
   $$('.tab').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab !== 'create') stop(); if (b.dataset.tab === 'explore') renderEx(); }));
+
+  // The loop survives a reload: key, chords, melody and sound settings.
+  const UI = ['#crBpm', '#crTimbre', '#crRhythm', '#crBass', '#crDrums', '#crLead', '#melLen', '#melOn'];
+  try {
+    const L = store.get('loop', null);
+    if (L && ROOTS.includes(L.root) && PADS[L.mode] && Array.isArray(L.slots)) {
+      Object.assign(CR, { root: L.root, mode: L.mode, sev: !!L.sev, slots: L.slots.slice(0, 8), mel: Array.isArray(L.mel) ? L.mel : [], melOn: L.melOn !== false });
+      if (!CR.slots.every(s => s && chordOf(s.r3) && chordOf(s.r7))) { CR.slots = []; CR.mel = []; }
+      UI.forEach(s => { if (L.ui && s in L.ui) { const el = $(s); if (el.type === 'checkbox') el.checked = !!L.ui[s]; else el.value = L.ui[s]; } });
+    }
+  } catch (e) { CR.slots = []; CR.mel = []; }
+  save = () => store.set('loop', { root: CR.root, mode: CR.mode, sev: CR.sev, slots: CR.slots, mel: CR.mel, melOn: CR.melOn, ui: Object.fromEntries(UI.map(s => [s, $(s).type === 'checkbox' ? $(s).checked : $(s).value])) });
+  UI.forEach(s => $(s).addEventListener('change', () => save()));
 
   render();
   return { load, stop, drum, state: CR, challenge: CH };

@@ -15,7 +15,7 @@ const Snd = {
   ensure() {
     if (!this.ctx) {
       const C = window.AudioContext || window.webkitAudioContext; this.ctx = new C();
-      const comp = this.ctx.createDynamicsCompressor(); this.master = this.ctx.createGain(); this.master.gain.value = 0.7;
+      const comp = this.ctx.createDynamicsCompressor(); this.master = this.ctx.createGain(); this.master.gain.value = store.get('vol', 0.7);
       this.master.connect(comp); comp.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -175,8 +175,25 @@ function showTab(name) {
   if (name === 'explore') setDock('', []);
   if (name === 'create') setDock('', [], smallScreen());
   if (name === 'quiz') quizDockNote();
-  $('#main').scrollTop = 0;
+  $('#main').scrollTop = 0; syncHash();
 }
+// ---- address bar: #learn, #learn/<topic>, #create ... so Back/Forward work and a reload keeps your place ----
+let ROUTING = false;
+function syncHash() {
+  if (ROUTING || typeof Learn === 'undefined') return;
+  const h = TAB === 'quiz' ? '' : TAB === 'learn' && Learn.topic() ? 'learn/' + Learn.topic() : TAB;
+  if (decodeURIComponent(location.hash.slice(1)) === h) return;
+  try { history.pushState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) { }
+}
+function route() {
+  const [tab, id] = decodeURIComponent(location.hash.slice(1)).split('/'), name = ['learn', 'create', 'explore', 'stats'].includes(tab) ? tab : 'quiz';
+  ROUTING = true;
+  try {
+    if (name === 'learn' && id && COURSE[id] && Learn.topic() !== id) Learn.open(id);
+    else { if (name === 'learn' && !id && Learn.topic()) Learn.close(); if (TAB !== name) $(`.tab[data-tab=${name}]`).click(); }
+  } finally { ROUTING = false; }
+}
+window.addEventListener('popstate', route); window.addEventListener('DOMContentLoaded', route);
 $$('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 $('#labelMode').value = LABEL_MODE;
 $('#labelMode').onchange = e => { LABEL_MODE = e.target.value; store.set('labels', LABEL_MODE); ALL_PIANOS.forEach(p => p.refresh()); };
@@ -310,7 +327,7 @@ function chunk(html) {
 function lessonHTML(id, kicker) {
   const L = LESSONS[id]; if (!L) return '';
   return `<div class="lesson"><div class="lesson-kicker">${kicker} · ${topicName(id)}</div><div class="lesson-idea">${L.idea}</div>
-    <ul>${L.points.map(p => `<li>${p}</li>`).join('')}</ul>${L.tip ? `<div class="lesson-tip">🎧 ${L.tip}</div>` : ''}</div>`;
+    <ul>${L.points.map(p => `<li>${p}</li>`).join('')}</ul>${L.tip ? `<div class="lesson-tip">${L.tip}</div>` : ''}</div>`;
 }
 function playDemo(id) {
   const d = LESSONS[id] && LESSONS[id].demo; if (!d) return;
@@ -330,7 +347,7 @@ function showLesson(id, cb) {
   $('#qPrompt').innerHTML = lessonHTML(id, 'New topic');
   seqStop(); ['#replayBtn', '#qFeedback', '#qPianoCtl', '#learnRow', '#qSeq'].forEach(s => $(s).classList.add('hidden'));
   const o = $('#qOpts'); o.classList.remove('hidden');
-  o.innerHTML = `<div class="lesson-actions">${LESSONS[id].demo ? '<button id="demoBtn">▶ Hear it</button>' : ''}<button id="lessonGo" class="primary">Got it, try a question <kbd>Enter</kbd></button><button id="fullLesson" class="ghost">📖 Read the full lesson</button></div>`;
+  o.innerHTML = `<div class="lesson-actions">${LESSONS[id].demo ? '<button id="demoBtn">▶ Hear it</button>' : ''}<button id="lessonGo" class="primary">Got it, try a question <kbd>Enter</kbd></button><button id="fullLesson" class="ghost">Read the full lesson</button></div>`;
   quizPiano.clear(); quizPiano.selectable = false; quizDockNote();
   if ($('#demoBtn')) $('#demoBtn').onclick = () => playDemo(id);
   $('#lessonGo').onclick = () => lessonDone();
@@ -351,7 +368,7 @@ function toggleLessonPeek() {
     el.innerHTML = lessonHTML(S.q.topic, 'Lesson') + (LESSONS[S.q.topic].demo ? '<div class="btnrow" style="margin-top:10px"><button class="sm" id="peekDemo">▶ Hear it</button><button class="sm ghost" id="peekClose">Close</button></div>' : '<div class="btnrow" style="margin-top:10px"><button class="sm ghost" id="peekClose">Close</button></div>');
     if ($('#peekDemo')) $('#peekDemo').onclick = () => playDemo(S.q.topic);
     $('#peekClose').onclick = () => toggleLessonPeek();
-    $('#peekClose').insertAdjacentHTML('beforebegin', '<button class="sm ghost" id="peekFull">📖 Full lesson</button>'); $('#peekFull').onclick = () => Learn.open(S.q.topic);
+    $('#peekClose').insertAdjacentHTML('beforebegin', '<button class="sm ghost" id="peekFull">Full lesson</button>'); $('#peekFull').onclick = () => Learn.open(S.q.topic);
   } else if (S.q) { quizPiano.clear(); quizPiano.mark(S.q.show, 'q'); if (S.answered && S.q.reveal) quizPiano.mark(S.q.reveal, 'ans'); }
 }
 
@@ -419,7 +436,7 @@ function answerMC(i) {
   const b = btns[i]; b.classList.add('tried'); b.disabled = true; b.querySelector('.ic').textContent = '✗'; sfx('try');
   const left = btns.filter(x => !x.disabled);
   if (left.length === 1) return finalizeMC(q.answer, 'later');
-  tryMsg(R.pick(['Not quite, try again.', 'Close! Have another go.', 'Nope, try another one.']) + (S.tries >= 2 ? ' Stuck? Try 💡 Hint or 📖 Lesson.' : ''));
+  tryMsg(R.pick(['Not quite, try again.', 'Close! Have another go.', 'Nope, try another one.']) + (S.tries >= 2 ? ' Stuck? Try Hint or Lesson.' : ''));
 }
 function finalizeMC(pick, result) {
   S.answered = true; const q = S.q;
@@ -466,13 +483,13 @@ function hint() {
     const cands = $$('#qOpts button').map((b, j) => ({ b, j })).filter(x => x.j !== q.answer && !x.b.disabled);
     if (cands.length <= 1) return tryMsg('No more hints. It\'s one of the two left!', true);
     const x = R.pick(cands); x.b.classList.add('elim'); x.b.disabled = true; S.hints++;
-    tryMsg(`💡 Removed one wrong answer.${cands.length - 1 > 1 ? ' Ask again to remove another.' : ''}`, true);
+    tryMsg(`Removed one wrong answer.${cands.length - 1 > 1 ? ' Ask again to remove another.' : ''}`, true);
   } else {
     const selPcs = new Set([...quizPiano.selected].map(m => m % 12));
     const hinted = new Set(Object.entries(quizPiano.keys).filter(([, k]) => k.el.classList.contains('hint')).map(([m]) => +m % 12));
     const next = q.reveal.find(x => !selPcs.has(x.midi % 12) && !hinted.has(x.midi % 12));
     if (!next) return tryMsg('You already have every note. Remove any red ones and submit.', true);
-    S.hints++; quizPiano.mark([next], 'hint'); tryMsg(`💡 ${disp(next.label)} is in the chord (purple). Click it to add it.`, true);
+    S.hints++; quizPiano.mark([next], 'hint'); tryMsg(`${disp(next.label)} is in the chord (purple). Click it to add it.`, true);
   }
 }
 function showAnswer() {
@@ -505,7 +522,7 @@ function conclude(result, answerText, extra = '') {
   }[result];
   $('#fbTitle').innerHTML = `${title}<span class="xp-pop">+${r.gain} XP</span>${r.levelUp ? `<span class="lvl-pop">Level ${r.levelUp}!</span>` : ''}${r.boxUp ? '<span class="xp-pop" title="This topic moved up a mastery level">▲ topic up</span>' : ''}`;
   $('#fbBody').innerHTML = chunk(q.explain) + extra + (!ok && !q.retry ? '<div class="fb-legend">↻ This topic comes back in a few questions. Repetition is how it sticks.</div>' : '');
-  if (q.create) { $('#fbBody').insertAdjacentHTML('beforeend', '<div class="fb-create"><button class="sm" id="toCreate">🎹 Try this progression in Create</button></div>'); $('#toCreate').onclick = () => Create.load(q.create); }
+  if (q.create) { $('#fbBody').insertAdjacentHTML('beforeend', '<div class="fb-create"><button class="sm" id="toCreate">Try this progression in Create</button></div>'); $('#toCreate').onclick = () => Create.load(q.create); }
   $('#nextBtn').innerHTML = (S.total && S.idx >= S.total ? 'See results' : 'Next') + ' <kbd>Enter</kbd>';
   quizDockNote(); Tools.onAnswer(q);
   requestAnimationFrame(() => { fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); $('#nextBtn').focus({ preventScroll: true }); });
@@ -541,7 +558,7 @@ function finish() {
         <div class="btnrow">
           ${nextStep.kind === 'again' ? (course ? `<button id="sumCourse">${course.icon} ${course.title}</button>` : '') : `<button id="againBtn">↻ ${againLabel}</button>`}
           ${missedTopics.length ? `<button id="missBtn">Drill what I missed (${missedTopics.length} topic${missedTopics.length > 1 ? 's' : ''})</button>` : ''}
-          ${goalHit ? '<button id="sumCreate">🎹 Make a loop</button>' : ''}
+          ${goalHit ? '<button id="sumCreate">Make a loop</button>' : ''}
           <button class="ghost" id="homeBtn">Home</button>
         </div>
       </div>
@@ -570,10 +587,10 @@ const Flow = {
     if (id) {
       const t = TOPICS.find(x => x.id === id), n = TOPICS.indexOf(t) + 1;
       return Flow.read(id)
-        ? { kind: 'practise', icon: '▶', title: `Practise: ${t.name}`, sub: 'You read the lesson. 8 questions to make it stick.', go: () => startTopic(id) }
-        : { kind: 'lesson', icon: '📖', title: `Lesson ${n}: ${t.name}`, sub: `${COURSE[id].mins} min read with examples, then practise it`, go: () => Learn.open(id) };
+        ? { topic: id, kind: 'practise', icon: '▶', title: `Practise: ${t.name}`, sub: 'You read the lesson. 8 questions to make it stick.', go: () => startTopic(id) }
+        : { topic: id, kind: 'lesson', icon: '→', title: `Lesson ${n}: ${t.name}`, sub: `${COURSE[id].mins} min read with examples, then practise it`, go: () => Learn.open(id) };
     }
-    if (unread) return { kind: 'lesson', icon: '📖', title: `Lesson ${TOPICS.indexOf(unread) + 1}: ${unread.name}`, sub: `${COURSE[unread.id].mins} min read with examples`, go: () => Learn.open(unread.id) };
+    if (unread) return { kind: 'lesson', icon: '→', title: `Lesson ${TOPICS.indexOf(unread) + 1}: ${unread.name}`, sub: `${COURSE[unread.id].mins} min read with examples`, go: () => Learn.open(unread.id) };
     return null;
   },
   steps() {
@@ -581,7 +598,7 @@ const Flow = {
     const bits = [P.news.length ? `New: ${names(P.news)}` : '', P.review.length ? `Review: ${names(P.review.slice(0, 3))}${P.review.length > 3 ? '…' : ''}` : ''].filter(Boolean);
     const out = [{ id: 'dailyBtn', icon: '▶', done, title: done ? 'Daily practice done. Bonus round?' : '5-minute practice', sub: bits.join(' · ') || '10 questions · retry freely · stop anytime', go: () => startDaily() }];
     const c = Flow.course(); if (c) out.push(Object.assign({ id: 'studyBtn' }, c));
-    out.push({ id: 'makeBtn', icon: '🎹', title: 'Make a loop', sub: 'Use it for real: build a progression and melody in Create', go: () => showTab('create') });
+    out.push({ id: 'makeBtn', icon: '♪', title: 'Make a loop', sub: 'Use it for real: build a progression and melody in Create', go: () => showTab('create') });
     return out;
   },
 };
@@ -601,6 +618,9 @@ function renderStatus() {
 $('#statusPill').onclick = () => $('.tab[data-tab=stats]').click();
 
 // ---- settings (gear in the top bar) ----
+$('#volSel').value = store.get('vol', 0.7);
+$('#volSel').oninput = e => { const v = +e.target.value; store.set('vol', v); if (Snd.master) Snd.master.gain.value = v; };
+$('#volSel').onchange = () => Snd.note(60);
 function setGear(on) { $('#settingsPop').classList.toggle('hidden', !on); $('#gearBtn').setAttribute('aria-expanded', on ? 'true' : 'false'); }
 $('#gearBtn').onclick = e => { e.stopPropagation(); setGear($('#settingsPop').classList.contains('hidden')); };
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#settingsPop, #gearBtn')) setGear(false); });
@@ -622,7 +642,7 @@ function renderHome() {
   $('#goalText').innerHTML = `${Math.min(today, goal)}/${goal} answers<br><span class="muted small">${today >= goal ? 'goal reached!' : 'daily goal'}</span>`;
   $('#weekDots').innerHTML = Coach.week().map(d => `<span class="${d.n ? 'on' : ''} ${d.today ? 'today' : ''}" title="${d.key}: ${d.n} answers"><i></i>${d.label}</span>`).join('');
   const td = Coach.totalDays(); $('#daysTotal').textContent = td ? `${td} practice day${td > 1 ? 's' : ''} in total` : 'Your first day starts now';
-  const next = Coach.nextNew();
+  const next = (Flow.course() || {}).topic;
   const node = t => {
     const st = Coach.status(t.id), b = Coach.box(t.id), off = isOff(t.id), tag = off ? 'Off' : t.id === next ? 'Up next' : st === 'due' ? 'Review' : st === 'strong' ? '★' : '';
     return `<button class="pnode ${st} ${t.id === next ? 'next' : ''} ${off ? 'off' : ''}" data-t="${t.id}" title="${t.name}: ${off ? 'off' : st}. Right-click to turn ${off ? 'on' : 'off'}."><span class="pt"><span class="dot st-${st}"></span><span class="pn">${TOPICS.indexOf(t) + 1}</span>${t.name}<span class="tag">${tag}</span></span><span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span></button>`;
@@ -1083,9 +1103,13 @@ function renderFinder() {
     res = m.length ? `<div class="big">${m[0].name}</div><span class="alt">${m[0].full}${m.length > 1 ? ` · also: ${m.slice(1).map(x => x.name).join(', ')}` : ''}</span>`
       : `<div class="big">No common name</div><span class="alt">Could be a cluster or an extended/altered chord.</span>`;
   }
+  const fits = pcs.length < 2 ? [] : MAJOR_KEYS.filter(k => { const s = new Set(scaleNotes(k, 'major').map(pc)); return pcs.every(p => s.has(p)); });
+  if (fits.length) res += `<div class="cf-keys"><span class="muted small">In the key of</span>${fits.map(k => `<button class="sm" data-k="${k}" title="Highlight this key on the piano">${disp(k)} / ${disp(tr(k, 'M6'))}m</button>`).join('')}</div>`;
+  else if (pcs.length > 2) res += '<div class="cf-keys"><span class="muted small">Not in one major or natural minor key</span></div>';
   $('#cfOut').innerHTML = res + `<div class="btnrow" style="margin-top:10px"><button class="sm" id="cfPlay">▶ Play</button><button class="sm" id="cfFrom" title="Copy the highlighted or selected keys from the piano">⤓ From piano</button><button class="sm ghost" id="cfClear">Clear</button></div>`;
   $('#cfPlay').onclick = () => { const v = pcs.map(p => 60 + p); Snd.play(EV.arpChord(v)); flashKeys(v); };
   $('#cfClear').onclick = () => { CF.clear(); renderFinder(); };
+  $$('#cfOut [data-k]').forEach(b => b.onclick = () => setKey(b.dataset.k, 'major'));
   $('#cfFrom').onclick = () => {
     CF.clear(); Object.entries(dockPiano().keys).forEach(([m, k]) => { if (/\b(q|ans|sel|hint)\b/.test(k.el.className)) CF.add(+m % 12); });
     renderFinder();
@@ -1112,8 +1136,30 @@ function cheatForTopic(topic) {
   const tab = CS_TOPIC_TAB[topic]; if (!tab || tab === CS_TAB) return;
   CS_TAB = tab; renderCheat(); if (TOOLS.cheat) layoutTools();
 }
+let CS_Q = '';
 function renderCheat() {
   $$('#csTabs button').forEach(b => b.classList.toggle('active', b.dataset.cs === CS_TAB));
+  $('#csTabs').classList.toggle('searching', !!CS_Q);
+  if (!CS_Q) { $('#csBody').innerHTML = cheatHTML(CS_TAB); return; }
+  // Search: keep matching rows from every tab, under their tab and section names. A matching section title keeps the whole section.
+  const q = CS_Q.toLowerCase(), has = el => el.textContent.toLowerCase().includes(q), tmp = document.createElement('div'); let out = '';
+  $$('#csTabs button').forEach(b => {
+    tmp.innerHTML = cheatHTML(b.dataset.cs); let head = '', whole = false, part = '';
+    [...tmp.children].forEach(el => {
+      if (el.tagName === 'H4') { head = el.outerHTML; whole = has(el); return; }
+      let hit = '';
+      if (whole) hit = el.outerHTML;
+      else if (el.tagName === 'TABLE') {
+        const rows = [...el.rows].filter(r => r.cells[0].tagName !== 'TH' && has(r)), th = el.rows[0].cells[0].tagName === 'TH' ? el.rows[0].outerHTML : '';
+        if (rows.length) hit = `<table class="${el.className}">${th}${rows.map(r => r.outerHTML).join('')}</table>`;
+      } else if (has(el)) hit = el.outerHTML;
+      if (hit) { part += head + hit; head = ''; }
+    });
+    if (part) out += `<div class="cs-from">${b.textContent}</div>${part}`;
+  });
+  $('#csBody').innerHTML = out || '<p>Nothing found.</p>';
+}
+function cheatHTML(CS_TAB) {
   const fm = ivs => ivs.map(i => i === 'P1' ? 'R' : DEG[i] || i).join(' ');
   const semis = ivs => ivs.map(i => IV[i][0]), stack = ivs => semis(ivs).slice(1).map((s, k) => s - semis(ivs)[k]).join(' + ');
   const short = n => n.replace(/ \(.*\)/, '');
@@ -1180,9 +1226,10 @@ function renderCheat() {
     ${H('Sub and 808 notes')}<table><tr><th>Note</th><th>Hz</th><th>Note</th><th>Hz</th></tr>${range(0, 5).map(i => { const f = m => (440 * Math.pow(2, (m - 69) / 12)).toFixed(1); return `<tr><td>${disp(DEFAULT_NAMES[i])}1</td><td class="mono">${f(24 + i)}</td><td>${disp(DEFAULT_NAMES[i + 6])}1</td><td class="mono">${f(30 + i)}</td></tr>`; }).join('')}</table>
     <p>Double the number for the octave above (E1 41.2 → E2 82.4). Tune the kick or 808 to the root of your key.</p>
     ${H('Harmonics (overtones)')}<table><tr><th>Harmonic</th><th>Frequency</th><th>Pitch above the note</th></tr>${rows([['1', '1×', 'the note itself (fundamental)'], ['2', '2×', '1 octave'], ['3', '3×', 'octave + 5th'], ['4', '4×', '2 octaves'], ['5', '5×', '2 octaves + major 3rd'], ['6', '6×', '2 octaves + 5th'], ['7', '7×', '2 octaves + ♭7 (a little flat)'], ['8', '8×', '3 octaves']])}</table>`;
-  $('#csBody').innerHTML = h;
+  return h;
 }
-$$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; renderCheat(); layoutTools('cheat'); });
+$$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; CS_Q = $('#csSearch').value = ''; renderCheat(); layoutTools('cheat'); });
+$('#csSearch').oninput = e => { CS_Q = e.target.value.trim(); renderCheat(); layoutTools('cheat'); };
 
 // ---- tool registry / toggles ----
 const roll = new PianoRoll($('#pianoRoll'));

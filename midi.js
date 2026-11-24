@@ -22,7 +22,7 @@ const Midi = (() => {
     let name;
     if (pcs.size === 2) { const lo = Math.min(...held), hi = Math.max(...held), it = INTS.find(x => x.s === (hi - lo) % 12 || (x.s === 12 && (hi - lo) % 12 === 0)); name = it ? it.name : ''; }
     else { const f = findChords(pcs); name = f.length ? `${f[0].name} <span class="muted">(${f[0].full})</span>` : ''; }
-    if (name) $('#dockNote').innerHTML = `🎹 You're playing: <b>${name}</b>`;
+    if (name) $('#dockNote').innerHTML = `You're playing: <b>${name}</b>`;
   }
   function noteOn(m) {
     Snd.ensure(); Snd.tone(m, 0, 0.6, 0.28);
@@ -45,17 +45,17 @@ const Midi = (() => {
     if (cmd === 0x90 && d2 > 0) noteOn(d1); else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
   }
   function status(text, on, title) {
-    $$('.midi-btn').forEach(b => { b.textContent = b.id === 'midiBtn' ? (on ? '🎹 MIDI ✓' : '🎹 MIDI') : text; b.classList.toggle('on', !!on); b.title = title || text; });
-    const h = $('#pianoHint'); if (h) h.textContent = on ? '🎹 MIDI connected' : '';
+    $$('.midi-btn').forEach(b => { b.textContent = b.id === 'midiBtn' ? (on ? 'MIDI ✓' : 'MIDI') : text; b.classList.toggle('on', !!on); b.title = title || text; });
+    const h = $('#pianoHint'); if (h) h.textContent = on ? 'MIDI connected' : '';
   }
   function bind() {
     devices = []; access.inputs.forEach(inp => { inp.onmidimessage = onMsg; devices.push(inp.name); });
-    if (devices.length) status(`🎹 Connected: ${devices[0]}`, true, `MIDI connected: ${devices.join(', ')}`);
-    else status('🎹 No MIDI keyboard found. Plug one in.', false);
+    if (devices.length) status(`Connected: ${devices[0]}`, true, `MIDI connected: ${devices.join(', ')}`);
+    else status('No MIDI keyboard found. Plug one in.', false);
   }
   async function connect() {
-    if (!navigator.requestMIDIAccess) return status('🎹 MIDI needs Chrome or Edge', false);
-    try { access = await navigator.requestMIDIAccess(); } catch (e) { return status('🎹 MIDI permission was blocked', false); }
+    if (!navigator.requestMIDIAccess) return status('MIDI needs Chrome or Edge', false);
+    try { access = await navigator.requestMIDIAccess(); } catch (e) { return status('MIDI permission was blocked', false); }
     store.set('midi', true); bind(); access.onstatechange = bind;
   }
   $$('.midi-btn').forEach(b => b.onclick = () => connect());

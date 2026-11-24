@@ -73,7 +73,7 @@ function seqHint() {
   for (const [r, st] of Object.entries(q.target)) st.forEach(s => { if (!SEQ.grid[r][s] && !seqBtn(r, s).classList.contains('miss')) cands.push([r, s]); });
   if (!cands.length) return tryMsg('Every needed step is already on or hinted. Remove any extras and submit.', true);
   const [r, s] = cands[0]; S.hints++; seqBtn(r, s).classList.add('miss');
-  tryMsg(`💡 There's a ${r} on step ${s + 1} (dashed outline). Click it to add it.`, true);
+  tryMsg(`There's a ${r} on step ${s + 1} (dashed outline). Click it to add it.`, true);
 }
 $('#seqPlay').onclick = () => seqPlay();
 $('#seqClear').onclick = () => { if (!SEQ.locked) seqRender(); };

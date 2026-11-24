@@ -48,14 +48,14 @@ const Learn = (() => {
       const k = c.cards[L.i];
       body = `<h2 class="card-title">${k.t}</h2><div class="card-body">${k.b.replace('__LIB__', 'Each of these loops is built for a mood. Open one in Create and listen.' + libTable())}</div>
         ${k.ex ? `<div class="exrow">${k.ex.map((e, j) => `<button class="exbtn" data-ex="${j}">▶ ${e[0]}</button>`).join('')}</div>` : ''}
-        ${k.create ? `<button class="sm create-link" id="lCreate">🎹 Try it in Create: ${progLabel(k.create.romans)}</button>` : ''}`;
+        ${k.create ? `<button class="sm create-link" id="lCreate">Try it in Create: ${progLabel(k.create.romans)}</button>` : ''}`;
     } else {
       body = `<h2 class="card-title">Wrap-up</h2>
         <div class="wrap-grid">
-          <div class="wbox daw"><div class="wb-t">🎧 In your DAW</div><p>${c.daw}</p></div>
-          <div class="wbox oops"><div class="wb-t">⚠ Common mistakes</div><ul>${c.mistakes.map(m => `<li>${m}</li>`).join('')}</ul></div>
+          <div class="wbox daw"><div class="wb-t">In your DAW</div><p>${c.daw}</p></div>
+          <div class="wbox oops"><div class="wb-t">Common mistakes</div><ul>${c.mistakes.map(m => `<li>${m}</li>`).join('')}</ul></div>
         </div>
-        <div class="wbox links"><div class="wb-t">📚 Go deeper</div>${c.links.map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${n} ↗</a>`).join('')}<div class="muted small" style="margin-top:6px">Also: ${c.book} of J. Anthony Allen's <i>Music Theory for Electronic Music Producers</i>.</div></div>
+        <div class="wbox links"><div class="wb-t">Go deeper</div>${c.links.map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${n} ↗</a>`).join('')}<div class="muted small" style="margin-top:6px">Also: ${c.book} of J. Anthony Allen's <i>Music Theory for Electronic Music Producers</i>.</div></div>
         <div class="btnrow wrap-cta"><button class="primary lg" id="lPractice">▶ Practise this topic (8 questions)</button>${nextId() ? `<button id="lNext">Next lesson: ${topicName(nextId())} →</button>` : ''}</div>`;
       if (!learned.has(L.id)) { learned.add(L.id); store.set('learned', [...learned]); const lv = Coach.addXP(15); renderStatus(); body = `<div class="lesson-done">✓ Lesson complete <span class="xp-pop">+15 XP</span>${lv ? `<span class="lvl-pop">Level ${lv}!</span>` : ''}</div>` + body; if ($('#sfx').checked) sfx('first'); }
     }
@@ -93,11 +93,11 @@ const Learn = (() => {
     L.id = id; L.i = 0; cheatForTopic(id);
     $('#learnMap').classList.add('hidden'); $('#learnReader').classList.remove('hidden');
     if (TAB !== 'learn') showTab('learn'); else updateDockVisibility();
-    render(); updateDockVisibility();
+    render(); updateDockVisibility(); syncHash();
   }
   function close() {
     L.id = null; if (typeof renderHome === 'function') renderHome(); $('#learnReader').classList.add('hidden'); $('#learnMap').classList.remove('hidden');
-    renderMap(); updateDockVisibility(); $('#main').scrollTop = 0;
+    renderMap(); updateDockVisibility(); $('#main').scrollTop = 0; syncHash();
   }
 
   document.addEventListener('keydown', e => {
@@ -109,5 +109,5 @@ const Learn = (() => {
   $$('.tab').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab === 'learn' && !L.id) renderMap(); }));
 
   renderMap();
-  return { topic: () => L.id, open, isOpen, isLearned: id => learned.has(id), renderMap, reset: () => { learned = new Set(); store.set('learned', []); renderMap(); } };
+  return { topic: () => L.id, open, close, isOpen, isLearned: id => learned.has(id), renderMap, reset: () => { learned = new Set(); store.set('learned', []); renderMap(); } };
 })();

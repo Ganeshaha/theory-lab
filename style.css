@@ -863,3 +863,14 @@ body.focus.in-play .gear { display: none; }
 .pnode.off, .lcard.off { opacity: .45; border-style: dashed; box-shadow: none; }
 .pnode.off .tag, .lc-off { color: var(--dim); }
 .lc-off { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ============ cheat sheet search, key suggestions in the chord finder, volume ============ */
+.cs-search { width: 100%; margin-top: var(--s1); padding: 6px 10px; font-size: 13px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line2); color: var(--text); }
+.cs-search:focus { outline: none; border-color: var(--accent); }
+#csTabs.searching button.active { background: none; color: inherit; box-shadow: none; }
+.cs-from { margin: var(--s4) 0 var(--s2); padding-bottom: 4px; border-bottom: 1px solid var(--line2); font-size: 13px; font-weight: 700; color: var(--text); }
+.cs-from:first-child { margin-top: 0; }
+.cs-from + h4 { margin-top: 0; }
+.cf-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.cf-keys button { padding: 3px 9px; font-size: 12.5px; }
+.set-row input[type=range] { width: 130px; accent-color: var(--accent); }

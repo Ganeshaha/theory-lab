@@ -124,8 +124,8 @@
                 </div>
               </div>
               <div class="learnrow" id="learnRow">
-                <button id="hintBtn" class="sm">💡 Hint <kbd>H</kbd></button>
-                <button id="lessonBtn" class="ghost sm" title="Re-read the 30-second lesson for this topic (L)">📖 Lesson</button>
+                <button id="hintBtn" class="sm">Hint <kbd>H</kbd></button>
+                <button id="lessonBtn" class="ghost sm" title="Re-read the 30-second lesson for this topic (L)">Lesson</button>
                 <button id="showBtn" class="ghost sm">Show answer</button>
                 <span id="tryMsg" class="trymsg" aria-live="polite"></span>
               </div>
@@ -137,7 +137,7 @@
             </div>
 
             <div class="tool panel hidden" id="tool-roll">
-              <div class="tool-head"><span>▦ Piano roll</span><button class="ghost sm" data-close="roll" aria-label="Close piano roll">✕</button></div>
+              <div class="tool-head"><span>Piano roll</span><button class="ghost sm" data-close="roll" aria-label="Close piano roll">✕</button></div>
               <div id="pianoRoll"></div>
             </div>
           </div>
@@ -145,23 +145,24 @@
           <aside class="tools-col" id="toolsCol">
             <div class="tcol" id="tcolA">
             <div class="tool panel hidden" id="tool-circle">
-              <div class="tool-head"><span>◎ Circle of fifths &amp; keys</span><button class="ghost sm" data-close="circle" aria-label="Close">✕</button></div>
+              <div class="tool-head"><span>Circle of fifths &amp; keys</span><button class="ghost sm" data-close="circle" aria-label="Close">✕</button></div>
               <div id="tkCircle"></div>
               <div id="tkInfo"></div>
             </div>
             <div class="tool panel hidden" id="tool-finder">
-              <div class="tool-head"><span>🔍 Chord finder</span><button class="ghost sm" data-close="finder" aria-label="Close">✕</button></div>
+              <div class="tool-head"><span>Chord finder</span><button class="ghost sm" data-close="finder" aria-label="Close">✕</button></div>
                             <div class="pcgrid" id="cfGrid"></div>
               <div id="cfOut" class="cfout"></div>
             </div>
             <div class="tool panel hidden" id="tool-tempo">
-              <div class="tool-head"><span>⏱ Tempo &amp; delay</span><button class="ghost sm" data-close="tempo" aria-label="Close">✕</button></div>
+              <div class="tool-head"><span>Tempo &amp; delay</span><button class="ghost sm" data-close="tempo" aria-label="Close">✕</button></div>
               <label class="field"><span class="field-label">BPM</span><input type="number" id="tBpm" value="128" min="20" max="400"></label>
               <div id="tBpmOut" class="tiles compact"></div>
               <div id="tBpmExtra" class="muted small"></div>
             </div>
             <div class="tool panel hidden" id="tool-cheat">
-              <div class="tool-head"><span>📋 Cheat sheet</span><button class="ghost sm" data-close="cheat" aria-label="Close">✕</button></div>
+              <div class="tool-head"><span>Cheat sheet</span><button class="ghost sm" data-close="cheat" aria-label="Close">✕</button></div>
+              <input type="search" id="csSearch" class="cs-search" placeholder="Search" aria-label="Search the cheat sheet" autocomplete="off">
               <div class="seg" id="csTabs"><button data-cs="int" class="active">Intervals</button><button data-cs="chord">Chords</button><button data-cs="scale">Scales</button><button data-cs="key">Keys</button><button data-cs="harm">Harmony</button><button data-cs="rhythm">Rhythm</button><button data-cs="sound">Sound</button></div>
               <div id="csBody" class="csbody"></div>
             </div>
@@ -207,7 +208,7 @@
 
             <div class="challenge" id="crChal">
               <div class="ch-row">
-                <b>🎧 Rebuild by ear</b>
+                <b>Rebuild by ear</b>
                 <select id="chLevel" aria-label="Challenge level"><option value="1">Easy: the 4 main chords</option><option value="2">Medium: any chord in the key</option><option value="3">Hard: with a colour chord</option></select>
                 <button id="chNew" class="primary sm">New challenge</button>
                 <button id="chHear" class="sm hidden">▶ Hear target</button>
@@ -224,8 +225,8 @@
 
             <div class="btnrow cr-transport">
               <button id="crPlay" class="primary lg">▶ Play</button>
-              <button id="crInspire">🎲 Inspire me</button>
-              <button id="crSpice" title="Apply a real technique to your loop and explain it">✨ Spice it</button>
+              <button id="crInspire">Inspire me</button>
+              <button id="crSpice" title="Apply a real technique to your loop and explain it">Spice it</button>
               <span class="grow"></span>
               <button id="crExport">⤓ Export MIDI</button>
             </div>
@@ -233,7 +234,7 @@
             <div class="btnrow mel-ctl">
               <label class="switch"><input type="checkbox" id="melOn" checked><span></span> Play melody</label>
               <label class="field-inline">Note <select id="melLen"><option value="1">1/8</option><option value="2" selected>1/4</option><option value="4">1/2</option><option value="8">1 bar</option></select></label>
-              <button id="melGen">🎲 Melody idea</button>
+              <button id="melGen">Melody idea</button>
               <button id="melClear" class="ghost">Clear melody</button>
               <span id="melStat" class="muted small"></span>
             </div>
@@ -327,12 +328,14 @@
   <div class="settings-pop hidden" id="settingsPop" role="dialog" aria-label="Settings">
     <h4>Practice</h4>
     <label class="switch" title="Wrong answers let you try again; hints and 'show answer' available. Stats count first tries only."><input type="checkbox" id="learnMode" checked><span></span> Learning mode</label>
-    <label class="switch"><input type="checkbox" id="autoPlay" checked><span></span> Auto-play sound</label>
     <label class="switch"><input type="checkbox" id="weakFirst"><span></span> Favour weak topics</label>
-    <label class="switch"><input type="checkbox" id="sfx" checked><span></span> Reward sounds</label>
     <label class="set-row">Daily goal
       <select id="goalSel"><option value="10">10 answers</option><option value="15">15 answers</option><option value="25">25 answers</option><option value="40">40 answers</option></select>
     </label>
+    <h4>Sound</h4>
+    <label class="set-row">Volume <input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7"></label>
+    <label class="switch"><input type="checkbox" id="autoPlay" checked><span></span> Auto-play sound</label>
+    <label class="switch"><input type="checkbox" id="sfx" checked><span></span> Reward sounds</label>
     <h4>Keyboard</h4>
     <label class="switch" title="Show each question's key on the keyboard automatically"><input type="checkbox" id="dkAuto" checked><span></span> Show the question key</label>
     <label class="set-row" title="How black keys are labelled on the piano">Key labels
@@ -344,7 +347,7 @@
       </select>
     </label>
     <div class="set-btns">
-      <button id="midiBtn2" class="sm midi-btn">🎹 Connect MIDI keyboard</button>
+      <button id="midiBtn2" class="sm midi-btn">Connect MIDI keyboard</button>
       <button id="installBtn" class="sm hidden">⤓ Install as an app</button>
     </div>
   </div>
@@ -357,7 +360,7 @@
         <span>Key</span><select id="dkRoot" aria-label="Key root"></select><select id="dkType" aria-label="Key type"></select>
       </label>
       <button id="dkFromQ" class="ghost sm" title="Set the key from the current question (K)">Question key</button>
-      <button id="midiBtn" class="ghost sm midi-btn" title="Connect a MIDI keyboard">🎹 MIDI</button>
+      <button id="midiBtn" class="ghost sm midi-btn" title="Connect a MIDI keyboard">MIDI</button>
       <button id="dockToggle" class="ghost sm" aria-expanded="true" title="Show or hide the piano">▾ Hide</button>
     </div>
     <div class="dock-scroll" id="dockScroll">
