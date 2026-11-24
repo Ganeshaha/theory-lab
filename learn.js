@@ -90,7 +90,7 @@ const Learn = (() => {
   const nextId = () => order[order.indexOf(L.id) + 1];
   function go(i) { const n = COURSE[L.id].cards.length; if (i < 0 || i > n) return; L.i = i; render(); }
   function open(id) {
-    L.id = id; L.i = 0;
+    L.id = id; L.i = 0; cheatForTopic(id);
     $('#learnMap').classList.add('hidden'); $('#learnReader').classList.remove('hidden');
     if (TAB !== 'learn') showTab('learn'); else updateDockVisibility();
     render(); updateDockVisibility();
@@ -109,5 +109,5 @@ const Learn = (() => {
   $$('.tab').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab === 'learn' && !L.id) renderMap(); }));
 
   renderMap();
-  return { open, isOpen, isLearned: id => learned.has(id), renderMap, reset: () => { learned = new Set(); store.set('learned', []); renderMap(); } };
+  return { topic: () => L.id, open, isOpen, isLearned: id => learned.has(id), renderMap, reset: () => { learned = new Set(); store.set('learned', []); renderMap(); } };
 })();

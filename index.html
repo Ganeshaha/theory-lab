@@ -13,7 +13,7 @@
 <body>
 <div class="app">
   <header class="topbar"><div class="topbar-in">
-    <div class="brand"><span class="logo">♪</span> Theory Lab</div>
+    <div class="brand" role="button" tabindex="0" title="Home"><span class="logo">♪</span> Theory Lab</div>
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="quiz" role="tab">Practice</button>
       <button class="tab" data-tab="learn" role="tab">Learn</button>
@@ -21,7 +21,7 @@
       <button class="tab" data-tab="explore" role="tab">Explorer</button>
       <button class="tab" data-tab="stats" role="tab">Progress</button>
     </nav>
-    <div class="toolbar hidden" id="toolbar" role="toolbar" aria-label="Learning tools">
+    <div class="toolbar" id="toolbar" role="toolbar" aria-label="Learning tools">
           
           <button data-tool="piano" aria-pressed="false">Piano</button>
           <button data-tool="roll" aria-pressed="false">Piano roll</button>
@@ -333,6 +333,7 @@
     </section>
   </main>
 
+  <aside class="tools-float" id="toolsFloat" aria-label="Tools"></aside>
   <footer class="dock" id="dock">
     <div class="dock-head">
       <span id="dockNote" class="muted small"></span>

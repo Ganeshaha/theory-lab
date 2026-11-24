@@ -200,7 +200,7 @@ details.more[open] { display: block; margin-top: 6px; }
 .breakbar { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3) var(--s4); margin-bottom: var(--s3); border-radius: var(--r); background: rgba(34, 211, 238, .08); border: 1px solid rgba(34, 211, 238, .3); font-size: 14px; }
 .breakbar .grow { flex: 1; }
 .toolbar .grow { flex: 1; }
-body.focus.in-play .brand, body.focus.in-play .tabs, body.focus.in-play .status, body.focus .tools-col, body.focus #tool-roll, body.focus .toolbar button:not([data-focus]), body.focus .toolbar-label, body.focus #qTopic { display: none !important; }
+body.focus.in-play .brand, body.focus.in-play .tabs, body.focus.in-play .status, body.focus.in-play .tools-col, body.focus.in-play #tool-roll, body.focus.in-play .toolbar button:not([data-focus]), body.focus .toolbar-label, body.focus #qTopic { display: none !important; }
 body.focus .with-side .play-layout { grid-template-columns: minmax(0, 1fr); }
 body.focus .wrap.play { max-width: 760px; padding-top: var(--s6); }
 body.focus #qPrompt { font-size: 24px; }
@@ -786,12 +786,12 @@ button.primary:hover { background: linear-gradient(180deg, #a78dff, #8869fb); }
 
 /* ============ compact practice: tools live in the top bar, tighter vertical rhythm ============ */
 .topbar-in { padding: 6px var(--s5); gap: var(--s4); flex-wrap: wrap; row-gap: 6px; }
-body.in-play .topbar-in { max-width: 1760px; }
+.topbar-in { max-width: 1760px; }
 .topbar .toolbar { position: static; flex: 1; min-width: 0; margin: 0; padding: 0; background: none; flex-wrap: nowrap; gap: 5px; }
 .topbar .toolbar button { white-space: nowrap; }
 .topbar .status { margin-left: 0; }
 .topbar-in > .tabs + .status, .topbar-in > .toolbar.hidden + .status { margin-left: auto; }
-body.focus .topbar-in { justify-content: flex-end; }
+body.focus.in-play .topbar-in { justify-content: flex-end; }
 .wrap.play { padding-top: var(--s3); padding-bottom: var(--s4); }
 body.focus .wrap.play { padding-top: var(--s4); }
 .progress { margin: 6px 0 var(--s3); }
@@ -803,8 +803,8 @@ body.focus .wrap.play { padding-top: var(--s4); }
 .tool { padding: var(--s2) var(--s4) var(--s3); }
 .tool-head { margin-bottom: 4px; }
 .topbar .toolbar { flex: 1 0 auto; }
-@media (max-width: 1500px) { body.in-play .brand { font-size: 0; gap: 0; } body.in-play .tab { padding: 6px 10px; } body.in-play .topbar-in { gap: var(--s3); } }
-@media (max-width: 1400px) { body.in-play .status > span:nth-child(2), body.in-play .status .sep { display: none; } }
+@media (max-width: 1500px) { .brand { font-size: 0; gap: 0; } .tab { padding: 6px 10px; } .topbar-in { gap: var(--s3); } }
+@media (max-width: 1400px) { .status > span:nth-child(2), .status .sep { display: none; } }
 
 .dkauto { font-size: 12px; color: var(--muted); gap: 6px; }
 .dkauto span { width: 28px; height: 16px; } .dkauto span::after { width: 10px; height: 10px; } .dkauto input:checked + span::after { transform: translateX(12px); }
@@ -836,5 +836,14 @@ body.focus .wrap.play { padding-top: var(--s4); }
 #exView + .field { margin-top: var(--s3); }
 .ex-title { font-size: 20px; }
 .cr-label { margin-top: var(--s4); }
-body:not(.on-quiz) .dkey, body:not(.on-quiz) #dkFromQ, body:not(.on-quiz) .dkauto, body:not(.on-quiz) #dkMsg { display: none; }
+body:not(.in-play) #dkFromQ, body:not(.in-play) .dkauto, body:not(.in-play) #dkMsg { display: none; }
 #exInfo .notes { gap: 5px; } #exInfo .note { width: 44px; }
+
+/* ============ tools on every page: outside a question session they float on the right ============ */
+body:not(.in-play) #toolbar [data-tool=piano], body:not(.in-play) #toolbar [data-tool=roll], body:not(.in-play) #focusBtn, body:not(.in-play) #tkRoll { display: none; }
+.tools-float { display: none; position: fixed; z-index: 6; right: 16px; top: var(--tf-top, 72px); width: 372px; }
+body.tools-float-open .tools-float { display: block; }
+.tools-float .tools-col { max-height: var(--side-h, 70vh); overflow-y: auto; padding-right: 2px; }
+.tools-float .tool { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 18px 40px -12px rgba(0, 0, 0, .8); }
+body.tools-float-open #main { padding-right: 396px; }
+.brand { cursor: pointer; } .brand:hover .logo { filter: brightness(1.15); }

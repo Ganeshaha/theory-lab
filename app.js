@@ -81,7 +81,7 @@ class Piano {
   }
   refresh() {
     this.el.classList.toggle('hide-labels', this.hidden || LABEL_MODE === 'off');
-    const K = this.keyed ? keyInfo() : null; // only the practice keyboard shows the chosen key
+    const K = keyInfo();
     for (const [m, k] of Object.entries(this.keys)) {
       const p = +m % 12, info = K && K.byPc[p], spelled = info && (isBlackPc(p) || info.name !== SHARP_NAMES[p]) ? disp(info.name) + (p === 0 ? `<sub>${Math.floor(m / 12) - 1}</sub>` : '') : null;
       k.lbl.innerHTML = (k.name ? disp(k.name) : spelled || this.defaultLabel(+m)) + (k.sub ? `<em>${k.sub}</em>` : '');
@@ -549,6 +549,7 @@ function finish() {
   $('#homeBtn').onclick = () => goHome();
   quizDockNote();
 }
+$('.brand').onclick = () => { Tools.stop(); seqStop(); Snd.stop(); S.q = null; S.inLesson = null; goHome(); $('#main').scrollTop = 0; };
 function goHome() { $('#summary').classList.add('hidden'); $('#play').classList.add('hidden'); renderSetup(); renderHome(); $('#setup').classList.remove('hidden'); showTab('quiz'); }
 
 // ---- flow: what should happen next (shared by the home screen, session wrap-up and lessons) ----
@@ -828,8 +829,9 @@ $('#bpmIn').oninput = renderBpm; renderBpm();
 // =====================================================================
 //  LEARNING TOOLS (available during practice)
 // =====================================================================
+const dockPiano = () => TAB === 'quiz' ? quizPiano : exPiano;
 function flashKeys(ms, dur = 700) {
-  ms.forEach(m => { const k = quizPiano.keys[m]; if (k) { k.el.classList.add('active'); setTimeout(() => k.el.classList.remove('active'), dur); } });
+  ms.forEach(m => { const k = dockPiano().keys[m]; if (k) { k.el.classList.add('active'); setTimeout(() => k.el.classList.remove('active'), dur); } });
 }
 
 // ---- piano roll ----
@@ -999,7 +1001,7 @@ function applyQuestionKey() {
   const k = questionKey(S.q, S.answered);
   if (k && k.ear) return { msg: 'Ear-training question: answer first (the key would give it away).' };
   if (!k) return { msg: 'This question isn\'t in a particular key. Pick one yourself, or answer first and try again.' };
-  setKey(k.root, k.type);
+  setKey(k.root, k.type, true);
   const how = { question: 'named in the question', answer: 'from the answer', notes: 'best fit for the question\'s notes' }[k.src];
   return { ok: true, msg: `Key set to <b>${disp(KEYSEL.root)} ${SCALES[k.type].name}</b> (${how}).` };
 }
@@ -1009,10 +1011,11 @@ let KEY_AUTO = store.get('keyAuto', true);
 function autoKey(q, answered) {
   if (!KEY_AUTO) return;
   const k = questionKey(q, answered);
-  if (k && !k.ear && (answered || k.src === 'question')) setKey(k.root, k.type);
+  if (k && !k.ear && (answered || k.src === 'question')) setKey(k.root, k.type, true);
   else if (!answered && KEYSEL.type !== 'off') setKey(KEYSEL.root, 'off');
 }
-function setKey(root, type) {
+function setKey(root, type, fromQuestion = false) {
+  KEYSEL.q = fromQuestion; // a key that came from a question is cleared when you leave Practice
   KEYSEL.root = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; KEYSEL.type = type; store.set('pianoKey', KEYSEL);
   $('#dkRoot').value = KEYSEL.root; $('#dkType').value = type; $('#dock').classList.toggle('keyed', type !== 'off');
   ALL_PIANOS.forEach(p => p.refresh());
@@ -1070,7 +1073,7 @@ function renderFinder() {
   $('#cfPlay').onclick = () => { const v = pcs.map(p => 60 + p); Snd.play(EV.arpChord(v)); flashKeys(v); };
   $('#cfClear').onclick = () => { CF.clear(); renderFinder(); };
   $('#cfFrom').onclick = () => {
-    CF.clear(); Object.entries(quizPiano.keys).forEach(([m, k]) => { if (/\b(q|ans|sel|hint)\b/.test(k.el.className)) CF.add(+m % 12); });
+    CF.clear(); Object.entries(dockPiano().keys).forEach(([m, k]) => { if (/\b(q|ans|sel|hint)\b/.test(k.el.className)) CF.add(+m % 12); });
     renderFinder();
   };
 }
@@ -1203,18 +1206,22 @@ ALLT.forEach(k => {
 });
 function layoutTools(keep) {
   const play = $('#play'), main = $('#main'), A = $('#tcolA'), B = $('#tcolB'), open = SIDE.filter(k => TOOLS[k]);
-  const visible = !play.classList.contains('hidden') && !document.body.classList.contains('focus') && TAB === 'quiz';
-  document.body.classList.toggle('tools-side', visible && open.length > 0 && window.innerWidth >= 900);
+  const inPlay = TAB === 'quiz' && !play.classList.contains('hidden'), float = !inPlay, col = $('#toolsCol');
+  const visible = !(inPlay && document.body.classList.contains('focus'));
+  const home = float ? $('#toolsFloat') : play.querySelector('.play-layout'); if (col.parentElement !== home) home.appendChild(col);
+  document.body.classList.toggle('tools-side', inPlay && visible && open.length > 0 && window.innerWidth >= 900);
+  document.body.classList.toggle('tools-float-open', float && open.length > 0);
+  if (float) play.classList.remove('two');
   if (visible && open.length) {
-    const stacked = window.innerWidth < 900, GAP = 12;
-    const avail = Math.max(120, main.clientHeight - parseFloat(getComputedStyle(play).paddingTop) - 30);
-    play.style.setProperty('--side-h', avail + 'px'); play.style.setProperty('--tb-h', '10px');
+    const stacked = inPlay && window.innerWidth < 900, GAP = 12, r = main.getBoundingClientRect();
+    const avail = Math.max(120, float ? main.clientHeight - 28 : main.clientHeight - parseFloat(getComputedStyle(play).paddingTop) - 30);
+    const bs = document.body.style; bs.setProperty('--side-h', avail + 'px'); bs.setProperty('--tb-h', '10px'); bs.setProperty('--tf-top', (r.top + 14) + 'px');
     play.classList.remove('two'); SIDE.forEach(k => { A.appendChild(toolEl(k)); toolEl(k).classList.remove('collapsed'); toolEl(k).querySelector('.tool-body').style.maxHeight = ''; });
     const first = toolEl(open[0]); first.classList.add('collapsed'); const HEAD = first.offsetHeight; first.classList.remove('collapsed');
     const H = {}; open.forEach(k => { H[k] = toolEl(k).offsetHeight; AUTO[k] = false; });
     const h = k => TSTATE.coll[k] ? HEAD : H[k], sum = ks => ks.reduce((a, k) => a + h(k), 0) + GAP * Math.max(0, ks.length - 1);
     let cols = [open];
-    if (!stacked && window.innerWidth >= 1760 && open.length > 1 && sum(open) > avail) {
+    if (inPlay && !stacked && window.innerWidth >= 1760 && open.length > 1 && sum(open) > avail) {
       let best = null;
       for (let mask = 1; mask < (1 << open.length) - 1; mask++) {
         const a = open.filter((_, i) => !(mask >> i & 1)), b = open.filter((_, i) => mask >> i & 1), score = Math.max(sum(a), sum(b));
@@ -1243,7 +1250,7 @@ function applyTools(keep) {
   $$('#toolbar button[data-tool]').forEach(b => b.setAttribute('aria-pressed', TOOLS[b.dataset.tool] ? 'true' : 'false'));
   ALLT.forEach(k => toolEl(k).classList.toggle('hidden', !TOOLS[k]));
   $('#play').classList.toggle('with-side', SIDE.some(k => TOOLS[k]));
-  $('#toolsClose').classList.toggle('hidden', ALLT.filter(k => TOOLS[k]).length < 2);
+  $('#toolsClose').classList.toggle('hidden', (document.body.classList.contains('in-play') ? ALLT : SIDE).filter(k => TOOLS[k]).length < 2);
   if (!TOOLS.roll) roll.stop();
   updateDockVisibility(); store.set('tools', TOOLS); layoutTools(keep);
 }
@@ -1252,15 +1259,23 @@ $$('#toolbar button[data-tool]').forEach(b => b.onclick = () => {
   if (TOOLS[k] && k !== 'piano') { TSTATE.coll[k] = false; touchTool(k); }
   applyTools(k);
   if (k === 'roll' && TOOLS.roll && S.q) roll.load(S.q, S.answered);
-  if (k === 'cheat' && TOOLS.cheat && S.q) { CS_LAST_TOPIC = null; cheatForTopic(S.q.topic); }
+  if (k === 'cheat' && TOOLS.cheat) { const t = TAB === 'learn' && Learn.topic() ? Learn.topic() : S.q && S.q.topic; if (t) { CS_LAST_TOPIC = null; cheatForTopic(t); } }
   if (TOOLS[k] && k !== 'piano') { const el = toolEl(k); requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
 });
-$('#toolsClose').onclick = () => { ALLT.forEach(k => TOOLS[k] = false); applyTools(); };
+$('#toolsClose').onclick = () => { (document.body.classList.contains('in-play') ? ALLT : SIDE).forEach(k => TOOLS[k] = false); applyTools(); };
 $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = false; applyTools(); });
-// The tools bar lives in the top bar and only shows while a question session is on screen.
-const syncToolbar = () => { const on = TAB === 'quiz' && !$('#play').classList.contains('hidden'); $('#toolbar').classList.toggle('hidden', !on); document.body.classList.toggle('in-play', on); document.body.classList.toggle('on-quiz', TAB === 'quiz'); };
+// The tools bar lives in the top bar on every page. Piano, Piano roll and Focus only apply during a question session.
+let syncKey = '';
+const syncToolbar = () => {
+  const on = TAB === 'quiz' && !$('#play').classList.contains('hidden');
+  if (syncKey === TAB + on) return; syncKey = TAB + on; // layoutTools changes classes too: only react to a real page change
+  if (TAB !== 'quiz' && KEYSEL.q && KEYSEL.type !== 'off') setKey(KEYSEL.root, 'off');
+  document.body.classList.toggle('in-play', on); document.body.classList.toggle('on-quiz', TAB === 'quiz');
+  $('#toolsClose').classList.toggle('hidden', (on ? ALLT : SIDE).filter(k => TOOLS[k]).length < 2);
+  layoutTools();
+};
 new MutationObserver(syncToolbar).observe($('#play'), { attributes: true, attributeFilter: ['class'] });
-new MutationObserver(syncToolbar).observe($('#tab-quiz'), { attributes: true, attributeFilter: ['class'] });
+$$('.tabpane').forEach(p => new MutationObserver(syncToolbar).observe(p, { attributes: true, attributeFilter: ['class'] }));
 let toolsRaf = 0;
 new ResizeObserver(() => { cancelAnimationFrame(toolsRaf); toolsRaf = requestAnimationFrame(() => layoutTools()); }).observe($('#main'));
 
@@ -1271,7 +1286,7 @@ $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
 $('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); else $('#dkMsg').classList.add('hidden'); };
 $('#dkAuto').checked = KEY_AUTO;
 $('#dkAuto').onchange = e => { KEY_AUTO = e.target.checked; store.set('keyAuto', KEY_AUTO); if (KEY_AUTO && S.q && !$('#play').classList.contains('hidden')) autoKey(S.q, S.answered); };
-quizPiano.keyed = true; KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type); syncToolbar();
+KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type); syncToolbar();
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
 showTab('quiz');
