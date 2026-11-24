@@ -874,6 +874,21 @@ function flashKeys(ms, dur = 700) {
 }
 
 // ---- piano roll ----
+// Name a set of MIDI notes sounding together: a note, an interval, or a chord (with its inversion). Spelled in the selected key when there is one.
+function nameNotes(ms) {
+  ms = [...new Set(ms)].sort((x, y) => x - y); if (!ms.length) return null;
+  const K = keyInfo(), nm = p => disp(K && K.byPc[p % 12] ? K.byPc[p % 12].name : DEFAULT_NAMES[p % 12]), pcs = new Set(ms.map(m => m % 12)), bass = ms[0] % 12;
+  const spelled = [...new Set(ms.map(m => nm(m)))].join(' – ');
+  if (pcs.size === 1) return { name: nm(bass) + (ms.length > 1 ? ' in octaves' : ''), detail: ms.length > 1 ? '' : 'single note' };
+  if (pcs.size === 2) {
+    const top = ms.find(m => m % 12 !== bass), d = ms.length === 2 ? ms[1] - ms[0] : top - ms[0], s = d > 12 ? d % 12 || 12 : d, it = INTS.find(x => x.s === s);
+    return { name: it.name.replace(/ \(.*\)/, '') + (d > 12 ? ' + octave' : ''), detail: `${nm(bass)} up to ${nm(top)} · ${d} semitone${d > 1 ? 's' : ''}` };
+  }
+  const all = findChords(pcs), c = all.find(x => x.r === bass) || all[0];
+  if (!c) return { name: 'No common name', detail: spelled };
+  const tones = CHORDS[c.id].iv.map(i => (c.r + IV[i][0]) % 12), inv = tones.indexOf(bass);
+  return { name: nm(c.r) + CHORDS[c.id].sym + (inv > 0 ? '/' + nm(bass) : ''), detail: `${nm(c.r)} ${c.full.replace(/ \(.*\)/, '')}${inv > 0 ? ` · ${ORD[inv - 1]} inversion` : ''} · ${spelled}` };
+}
 class PianoRoll {
   constructor(el) {
     this.el = el; this.cols = 32; this.notes = []; this.len = 4; this.timer = null; this.step = 0; this.cells = {};
@@ -889,7 +904,7 @@ class PianoRoll {
         <label title="Highlight the notes of a key or scale, like Ableton's Scale mode">Key <select data-a="sroot">${ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</option>`).join('')}</select><select data-a="stype">${stypes.map(s => `<option value="${s}">${s === 'off' ? 'off' : SCALES[s].name}</option>`).join('')}</select></label>
         <button data-a="qkey" class="qkey" title="Set the scale to the current question's key (K)">Question key <kbd>K</kbd></button>
       </div>
-      <div class="pr-keyinfo"></div>
+      <div class="pr-info"><div class="pr-name" aria-live="polite"></div><div class="pr-keyinfo"></div></div>
       <div class="pr-scroll"><div class="pr-grid"></div></div>
       <div class="pr-hint"></div>`;
     const grid = el.querySelector('.pr-grid'); let html = '';
@@ -901,7 +916,7 @@ class PianoRoll {
     grid.innerHTML = html + '<div class="pr-head hidden"></div>';
     grid.querySelectorAll('.pr-cell').forEach(d => { (this.cells[d.dataset.m] = this.cells[d.dataset.m] || [])[+d.dataset.c] = d; });
     this.keyEls = {}; this.keyText = {}; grid.querySelectorAll('.pr-key').forEach(k => { this.keyEls[k.dataset.m] = k; this.keyText[k.dataset.m] = k.textContent; });
-    this.keyTitle = el.querySelector('.pr-keyinfo');
+    this.keyTitle = el.querySelector('.pr-keyinfo'); this.nameEl = el.querySelector('.pr-name'); this.focusC = 0;
     this.head = grid.querySelector('.pr-head'); this.scroller = el.querySelector('.pr-scroll'); this.hintEl = el.querySelector('.pr-hint'); this.hintText = this.hintEl.innerHTML;
     grid.addEventListener('pointerdown', e => {
       const t = e.target; if (t.classList.contains('pr-key')) return Snd.note(+t.dataset.m);
@@ -924,7 +939,7 @@ class PianoRoll {
     const i = this.notes.findIndex(n => n.m === m && c >= n.c && c < n.c + n.len);
     if (i >= 0) this.notes.splice(i, 1);
     else { this.notes.push({ m, c, len: Math.min(this.len, this.cols - c) }); Snd.note(m); }
-    this.render();
+    this.focusC = c; this.render();
   }
   render() {
     Object.values(this.cells).forEach(row => row.forEach(d => d.classList.remove('on', 'cont', 'ghost')));
@@ -932,6 +947,21 @@ class PianoRoll {
       const d = this.cells[n.m] && this.cells[n.m][n.c + k]; if (!d) continue;
       d.classList.add('on'); if (k) d.classList.add('cont'); if (n.ghost) d.classList.add('ghost');
     }
+    this.showName();
+  }
+  // What the notes spell: one name per group of notes that start together, the one under the last click (or the playhead) in full.
+  // Hidden while an unanswered question's own notes are in the grid, so it never gives the answer away.
+  showName() {
+    if (!this.nameEl) return;
+    const spoiler = S.q && !S.answered && TAB === 'quiz' && !$('#play').classList.contains('hidden') && this.notes.some(n => n.ghost);
+    const at = c => this.notes.filter(n => c >= n.c && c < n.c + n.len).map(n => n.m);
+    const onsets = spoiler ? [] : [...new Set(this.notes.map(n => n.c))].sort((x, y) => x - y);
+    const here = this.timer ? (this.step + this.cols - 1) % this.cols : this.focusC;
+    let cur = onsets.filter(c => c <= here).pop(); if (cur === undefined) cur = onsets[0];
+    const key = onsets.join() + '|' + cur + '|' + this.notes.length + '|' + this.notes.reduce((s, n) => s + n.m * (n.c + 1) + n.len, 0) + '|' + KEYSEL.root + KEYSEL.type;
+    if (key === this.nameKey) return; this.nameKey = key;
+    const i = onsets.indexOf(cur), from = Math.max(0, Math.min(i - 3, onsets.length - 8)), shown = onsets.slice(from, from + 8);
+    this.nameEl.innerHTML = (from ? '<span class="pr-more">…</span>' : '') + shown.map(c => { const n = nameNotes(at(c)); return n ? `<span class="pr-ch ${c === cur ? 'on' : ''}"><b>${n.name}</b>${c === cur && n.detail ? `<small>${n.detail}</small>` : ''}</span>` : ''; }).join('<span class="pr-more">→</span>') + (from + 8 < onsets.length ? '<span class="pr-more">…</span>' : '');
   }
   applyScale() {
     const on = this.stype !== 'off', notes = on ? scaleNotes(this.sroot, this.stype) : [], pcs = new Set(notes.map(pc)), r = pc(this.sroot);
@@ -952,7 +982,7 @@ class PianoRoll {
   }
   setScale(root, type) {
     this.sroot = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; this.stype = type;
-    this.el.querySelector('[data-a="sroot"]').value = this.sroot; this.el.querySelector('[data-a="stype"]').value = type; this.applyScale();
+    this.el.querySelector('[data-a="sroot"]').value = this.sroot; this.el.querySelector('[data-a="stype"]').value = type; this.applyScale(); this.showName();
   }
   load(q, answered, manual) {
     let evs = null;
@@ -965,7 +995,7 @@ class PianoRoll {
       const len = Math.max(1, Math.min(this.cols - c, Math.round(e.d * 8)));
       e.notes.filter(m => m >= LO && m <= HI).forEach(m => { if (!this.notes.some(n => n.m === m && n.c === c)) this.notes.push({ m, c, len, ghost: true }); });
     }
-    this.render();
+    this.focusC = 0; this.render();
     if (!this.notes.length) { if (manual) this.msg('Nothing to show for this question yet. Answer it first, or draw your own notes.'); return; }
     this.bpmEl.value = 120;
     const top = Math.max(...this.notes.map(n => n.m)), row = this.cells[top][0];
@@ -977,11 +1007,11 @@ class PianoRoll {
     const tick = () => {
       this.notes.filter(n => n.c === this.step).forEach(n => Snd.tone(n.m, 0, n.len * stepMs / 1000 * 0.92, 0.16));
       this.head.style.left = `calc(46px + (100% - 46px) * ${this.step / this.cols})`; this.head.style.width = `calc((100% - 46px) / ${this.cols})`;
-      this.step = (this.step + 1) % this.cols;
+      this.step = (this.step + 1) % this.cols; this.showName();
     };
     tick(); this.timer = setInterval(tick, stepMs);
   }
-  stop() { clearInterval(this.timer); this.timer = null; this.head.classList.add('hidden'); this.playBtn.textContent = '▶ Play'; }
+  stop() { clearInterval(this.timer); this.timer = null; this.head.classList.add('hidden'); this.playBtn.textContent = '▶ Play'; this.showName(); }
 }
 
 // ---- key of a question (for the "Question key" buttons) ----
@@ -1244,7 +1274,7 @@ $('#csSearch').oninput = e => { CS_Q = e.target.value.trim(); if (!CS_Q) CS_SCOP
 const roll = new PianoRoll($('#pianoRoll'));
 const Tools = {
   onQuestion(q) { if (TOOLS.roll && roll.follow) roll.load(q, false); cheatForTopic(q.topic); autoKey(q, false); },
-  onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); autoKey(q, true); },
+  onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); autoKey(q, true); roll.showName(); },
   stop() { roll.stop(); },
 };
 // Side tools sit in a sticky column beside the question. Each panel collapses to its title bar;
