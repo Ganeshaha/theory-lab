@@ -81,7 +81,7 @@ class Piano {
   }
   refresh() {
     this.el.classList.toggle('hide-labels', this.hidden || LABEL_MODE === 'off');
-    const K = keyInfo();
+    const K = this.keyed ? keyInfo() : null; // only the practice keyboard shows the chosen key
     for (const [m, k] of Object.entries(this.keys)) {
       const p = +m % 12, info = K && K.byPc[p], spelled = info && (isBlackPc(p) || info.name !== SHARP_NAMES[p]) ? disp(info.name) + (p === 0 ? `<sub>${Math.floor(m / 12) - 1}</sub>` : '') : null;
       k.lbl.innerHTML = (k.name ? disp(k.name) : spelled || this.defaultLabel(+m)) + (k.sub ? `<em>${k.sub}</em>` : '');
@@ -958,7 +958,7 @@ function keysInText(text) {
   while ((m = KEY_RE.exec(t))) {
     const word = m[4].toLowerCase(), type = KEY_WORDS.find(([w]) => w === word)[1];
     const before = t.slice(0, m.index + m[1].length), root = m[2] + m[3].replace('♯', '#').replace('♭', 'b');
-    out.push({ root, type, strong: /(\bin(\s+the\s+key\s+of)?|\bkey\s+(of|is)|\binto|\()\s*$/i.test(before) || !['major', 'minor'].includes(type) });
+    out.push({ root, type, strong: /(\bin(\s+the\s+key\s+of)?|\bkey\s+(of|is)|\binto|\()\)?\s*$/i.test(before) || !['major', 'minor'].includes(type) });
   }
   return out;
 }
@@ -1002,6 +1002,15 @@ function applyQuestionKey() {
   setKey(k.root, k.type);
   const how = { question: 'named in the question', answer: 'from the answer', notes: 'best fit for the question\'s notes' }[k.src];
   return { ok: true, msg: `Key set to <b>${disp(KEYSEL.root)} ${SCALES[k.type].name}</b> (${how}).` };
+}
+// Auto: show each question's key as it loads. Before you answer, only a key the question itself names is used
+// (the notes could give the answer away); once answered, the key is also worked out from the answer and notes.
+let KEY_AUTO = store.get('keyAuto', true);
+function autoKey(q, answered) {
+  if (!KEY_AUTO) return;
+  const k = questionKey(q, answered);
+  if (k && !k.ear && (answered || k.src === 'question')) setKey(k.root, k.type);
+  else if (!answered && KEYSEL.type !== 'off') setKey(KEYSEL.root, 'off');
 }
 function setKey(root, type) {
   KEYSEL.root = ROLL_ROOTS.includes(root) ? root : DEFAULT_NAMES[pc(root)]; KEYSEL.type = type; store.set('pianoKey', KEYSEL);
@@ -1161,8 +1170,8 @@ $$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; ren
 // ---- tool registry / toggles ----
 const roll = new PianoRoll($('#pianoRoll'));
 const Tools = {
-  onQuestion(q) { if (TOOLS.roll && roll.follow) roll.load(q, false); cheatForTopic(q.topic); },
-  onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); },
+  onQuestion(q) { if (TOOLS.roll && roll.follow) roll.load(q, false); cheatForTopic(q.topic); autoKey(q, false); },
+  onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); autoKey(q, true); },
   stop() { roll.stop(); },
 };
 // Side tools sit in a sticky column beside the question. Each panel collapses to its title bar;
@@ -1249,7 +1258,7 @@ $$('#toolbar button[data-tool]').forEach(b => b.onclick = () => {
 $('#toolsClose').onclick = () => { ALLT.forEach(k => TOOLS[k] = false); applyTools(); };
 $$('[data-close]').forEach(b => b.onclick = () => { TOOLS[b.dataset.close] = false; applyTools(); });
 // The tools bar lives in the top bar and only shows while a question session is on screen.
-const syncToolbar = () => { const on = TAB === 'quiz' && !$('#play').classList.contains('hidden'); $('#toolbar').classList.toggle('hidden', !on); document.body.classList.toggle('in-play', on); };
+const syncToolbar = () => { const on = TAB === 'quiz' && !$('#play').classList.contains('hidden'); $('#toolbar').classList.toggle('hidden', !on); document.body.classList.toggle('in-play', on); document.body.classList.toggle('on-quiz', TAB === 'quiz'); };
 new MutationObserver(syncToolbar).observe($('#play'), { attributes: true, attributeFilter: ['class'] });
 new MutationObserver(syncToolbar).observe($('#tab-quiz'), { attributes: true, attributeFilter: ['class'] });
 let toolsRaf = 0;
@@ -1260,7 +1269,9 @@ $('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCA
 $('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
 $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
 $('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); else $('#dkMsg').classList.add('hidden'); };
-KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type);
+$('#dkAuto').checked = KEY_AUTO;
+$('#dkAuto').onchange = e => { KEY_AUTO = e.target.checked; store.set('keyAuto', KEY_AUTO); if (KEY_AUTO && S.q && !$('#play').classList.contains('hidden')) autoKey(S.q, S.answered); };
+quizPiano.keyed = true; KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type); syncToolbar();
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
 showTab('quiz');

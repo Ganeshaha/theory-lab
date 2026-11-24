@@ -805,3 +805,36 @@ body.focus .wrap.play { padding-top: var(--s4); }
 .topbar .toolbar { flex: 1 0 auto; }
 @media (max-width: 1500px) { body.in-play .brand { font-size: 0; gap: 0; } body.in-play .tab { padding: 6px 10px; } body.in-play .topbar-in { gap: var(--s3); } }
 @media (max-width: 1400px) { body.in-play .status > span:nth-child(2), body.in-play .status .sep { display: none; } }
+
+.dkauto { font-size: 12px; color: var(--muted); gap: 6px; }
+.dkauto span { width: 28px; height: 16px; } .dkauto span::after { width: 10px; height: 10px; } .dkauto input:checked + span::after { transform: translateX(12px); }
+
+/* ============ compact pass: less vertical padding everywhere, one-row lesson header, two-column Explorer ============ */
+.wrap { padding-top: var(--s4); }
+.panel { padding: var(--s4) var(--s5); }
+.page-head { margin-bottom: var(--s3); }
+.hero { padding: var(--s4) var(--s6) var(--s5); }
+.hero .steps { margin-top: var(--s4); }
+/* lesson reader: back, title, progress dots and Back/Next share one row above the card */
+.reader { max-width: 980px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; align-items: center; gap: var(--s2) var(--s3); }
+.reader-head, .reader-nav { display: contents; }
+.reader-head > .muted { display: none; }
+#lBack { order: 1; } .reader-title { order: 2; } .reader .dots { order: 3; margin: 0; } #lPrev { order: 4; } .reader-nav > .muted { order: 5; } #lFwd, #lPractice2 { order: 6; }
+.reader-title h1 { font-size: 22px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reader .dots .dot { width: 22px; }
+.reader-nav button { min-width: 0; padding: 6px 14px; }
+.reader-card { order: 7; grid-column: 1 / -1; padding: var(--s5) var(--s6); min-height: 0; margin-bottom: var(--s3); }
+.card-body { line-height: 1.6; }
+/* explorer: facts on the left, diatonic chords on the right */
+.explore-grid > .panel:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: var(--s5); align-content: start; }
+.explore-grid > .panel:first-child > * { grid-column: 1 / -1; }
+.explore-grid > .panel:first-child > #exInfo { grid-column: 1; grid-row: 4; margin: var(--s3) 0 var(--s2); padding-top: var(--s3); }
+.explore-grid > .panel:first-child > .btnrow { grid-column: 1; grid-row: 5; align-self: start; }
+.explore-grid > .panel:first-child > #exDiatonic { grid-column: 2; grid-row: 4 / span 2; margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--line); }
+.explore-grid > .panel:first-child > #exDiatonic:empty { display: none; }
+.seg.big button { padding: 5px 12px; }
+#exView + .field { margin-top: var(--s3); }
+.ex-title { font-size: 20px; }
+.cr-label { margin-top: var(--s4); }
+body:not(.on-quiz) .dkey, body:not(.on-quiz) #dkFromQ, body:not(.on-quiz) .dkauto, body:not(.on-quiz) #dkMsg { display: none; }
+#exInfo .notes { gap: 5px; } #exInfo .note { width: 44px; }
