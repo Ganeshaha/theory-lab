@@ -899,3 +899,6 @@ body.focus.in-play .gear { display: none; }
 .dkname b { font-weight: 700; }
 .dkname small { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 #dkUnpin { flex: none; }
+/* keyboard bar: Clear marks at the far left, the chord name centred in the free space */
+.dkname { margin: 0 auto; }
+#dockNote:has(+ .dkname:not(.hidden)) { margin-right: 0; }
