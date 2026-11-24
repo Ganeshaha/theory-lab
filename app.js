@@ -124,7 +124,7 @@ function applyDock() {
 }
 function setDock(note, legend = [], idle = false, force = false) {
   $('#dockNote').innerHTML = note;
-  $('#legend').innerHTML = legend.map(k => `<span><i style="background:${LEGEND[k][0]}"></i>${LEGEND[k][1]}</span>`).join('');
+  $('#legend').innerHTML = legend.filter(k => k !== 'ans').map(k => `<span><i style="background:${LEGEND[k][0]}"></i>${LEGEND[k][1]}</span>`).join('');
   $('#dock').classList.toggle('idle', idle);
   DOCK.idle = idle; DOCK.force = force; applyDock();
 }
