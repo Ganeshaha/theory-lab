@@ -57,6 +57,10 @@ function keyInfo() {
 // ---------------- piano ----------------
 let LABEL_MODE = store.get('labels', 'both');
 const ALL_PIANOS = [];
+// Right-click a key to leave it marked (on every keyboard) until it is right-clicked again. Marks survive questions and page changes.
+const PINS = new Set();
+function syncPins() { ALL_PIANOS.forEach(p => p.refresh()); const b = $('#dkUnpin'); b.classList.toggle('hidden', !PINS.size); b.textContent = `Clear marks (${PINS.size})`; }
+function togglePin(m) { if (PINS.has(m)) PINS.delete(m); else { PINS.add(m); Snd.note(m); } syncPins(); }
 class Piano {
   constructor(el) { this.el = el; this.selectable = false; this.selected = new Set(); this.keys = {}; this.hidden = false; this.build(); ALL_PIANOS.push(this); }
   build() {
@@ -67,7 +71,8 @@ class Piano {
       if (isBlackPc(m)) { k.className = 'key black'; k.style.left = (wi * ww - ww * 0.31) + '%'; k.style.width = (ww * 0.62) + '%'; }
       else { k.className = 'key white'; k.style.left = (wi * ww) + '%'; k.style.width = ww + '%'; wi++; }
       if (m === 60) { k.classList.add('middle-c'); k.title = 'Middle C (C4; Ableton calls it C3)'; }
-      k.addEventListener('pointerdown', e => { e.preventDefault(); this.press(m); });
+      k.addEventListener('pointerdown', e => { e.preventDefault(); if (e.button === 0) this.press(m); });
+      k.addEventListener('contextmenu', e => { e.preventDefault(); togglePin(m); });
       this.el.appendChild(k); this.keys[m] = { el: k, lbl, deg, name: null, sub: null };
     }
     this.refresh();
@@ -85,7 +90,7 @@ class Piano {
     for (const [m, k] of Object.entries(this.keys)) {
       const p = +m % 12, info = K && K.byPc[p], spelled = info && (isBlackPc(p) || info.name !== SHARP_NAMES[p]) ? disp(info.name) + (p === 0 ? `<sub>${Math.floor(m / 12) - 1}</sub>` : '') : null;
       k.lbl.innerHTML = (k.name ? disp(k.name) : spelled || this.defaultLabel(+m)) + (k.sub ? `<em>${k.sub}</em>` : '');
-      k.el.classList.toggle('inkey', !!info); k.el.classList.toggle('keyroot', !!info && p === K.root); k.deg.textContent = info ? info.deg : '';
+      k.el.classList.toggle('pin', PINS.has(+m)); k.el.classList.toggle('inkey', !!info); k.el.classList.toggle('keyroot', !!info && p === K.root); k.deg.textContent = info ? info.deg : '';
     }
   }
   setHidden(h) { this.hidden = h; this.refresh(); }
@@ -1111,7 +1116,7 @@ function renderFinder() {
   $('#cfClear').onclick = () => { CF.clear(); renderFinder(); };
   $$('#cfOut [data-k]').forEach(b => b.onclick = () => setKey(b.dataset.k, 'major'));
   $('#cfFrom').onclick = () => {
-    CF.clear(); Object.entries(dockPiano().keys).forEach(([m, k]) => { if (/\b(q|ans|sel|hint)\b/.test(k.el.className)) CF.add(+m % 12); });
+    CF.clear(); Object.entries(dockPiano().keys).forEach(([m, k]) => { if (/\b(q|ans|sel|hint|pin)\b/.test(k.el.className)) CF.add(+m % 12); });
     renderFinder();
   };
 }
@@ -1354,6 +1359,7 @@ $('#dkRoot').innerHTML = ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</o
 $('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCALES).map(([id, s]) => `<option value="${id}">${s.name}</option>`).join('');
 $('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
 $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
+$('#dkUnpin').onclick = () => { PINS.clear(); syncPins(); };
 $('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); else $('#dkMsg').classList.add('hidden'); };
 $('#dkAuto').checked = KEY_AUTO;
 $('#dkAuto').onchange = e => { KEY_AUTO = e.target.checked; store.set('keyAuto', KEY_AUTO); if (KEY_AUTO && S.q && !$('#play').classList.contains('hidden')) autoKey(S.q, S.answered); };
