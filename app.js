@@ -1136,12 +1136,14 @@ function cheatForTopic(topic) {
   const tab = CS_TOPIC_TAB[topic]; if (!tab || tab === CS_TAB) return;
   CS_TAB = tab; renderCheat(); if (TOOLS.cheat) layoutTools();
 }
-let CS_Q = '';
+// Search: typing searches every tab; clicking a tab narrows the results to that tab (click it again for all tabs). The text stays until it is cleared.
+let CS_Q = '', CS_SCOPE = false;
 function renderCheat() {
-  $$('#csTabs button').forEach(b => b.classList.toggle('active', b.dataset.cs === CS_TAB));
-  $('#csTabs').classList.toggle('searching', !!CS_Q);
+  const tabs = $$('#csTabs button');
+  tabs.forEach(b => { b.classList.toggle('active', b.dataset.cs === CS_TAB); b.classList.remove('nohit'); });
+  $('#csTabs').classList.toggle('searching', !!CS_Q && !CS_SCOPE);
   if (!CS_Q) { $('#csBody').innerHTML = cheatHTML(CS_TAB); return; }
-  // Search: keep matching rows from every tab, under their tab and section names. A matching section title keeps the whole section.
+  // Keep matching rows under their tab and section names. A matching section title keeps the whole section.
   const q = CS_Q.toLowerCase(), has = el => el.textContent.toLowerCase().includes(q), tmp = document.createElement('div'); let out = '';
   $$('#csTabs button').forEach(b => {
     tmp.innerHTML = cheatHTML(b.dataset.cs); let head = '', whole = false, part = '';
@@ -1155,9 +1157,11 @@ function renderCheat() {
       } else if (has(el)) hit = el.outerHTML;
       if (hit) { part += head + hit; head = ''; }
     });
-    if (part) out += `<div class="cs-from">${b.textContent}</div>${part}`;
+    b.classList.toggle('nohit', !part);
+    if (part && (!CS_SCOPE || b.dataset.cs === CS_TAB)) out += `<div class="cs-from">${b.textContent}</div>${part}`;
   });
-  $('#csBody').innerHTML = out || '<p>Nothing found.</p>';
+  const others = tabs.filter(b => !b.classList.contains('nohit')).map(b => b.textContent);
+  $('#csBody').innerHTML = out || `<p>Nothing found${CS_SCOPE ? ` in ${$('#csTabs button.active').textContent}${others.length ? `. Matches in: ${others.join(', ')}` : ''}` : ''}.</p>`;
 }
 function cheatHTML(CS_TAB) {
   const fm = ivs => ivs.map(i => i === 'P1' ? 'R' : DEG[i] || i).join(' ');
@@ -1228,8 +1232,8 @@ function cheatHTML(CS_TAB) {
     ${H('Harmonics (overtones)')}<table><tr><th>Harmonic</th><th>Frequency</th><th>Pitch above the note</th></tr>${rows([['1', '1×', 'the note itself (fundamental)'], ['2', '2×', '1 octave'], ['3', '3×', 'octave + 5th'], ['4', '4×', '2 octaves'], ['5', '5×', '2 octaves + major 3rd'], ['6', '6×', '2 octaves + 5th'], ['7', '7×', '2 octaves + ♭7 (a little flat)'], ['8', '8×', '3 octaves']])}</table>`;
   return h;
 }
-$$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; CS_Q = $('#csSearch').value = ''; renderCheat(); layoutTools('cheat'); });
-$('#csSearch').oninput = e => { CS_Q = e.target.value.trim(); renderCheat(); layoutTools('cheat'); };
+$$('#csTabs button').forEach(b => b.onclick = () => { CS_SCOPE = !!CS_Q && !(CS_SCOPE && CS_TAB === b.dataset.cs); CS_TAB = b.dataset.cs; renderCheat(); layoutTools('cheat'); });
+$('#csSearch').oninput = e => { CS_Q = e.target.value.trim(); if (!CS_Q) CS_SCOPE = false; renderCheat(); layoutTools('cheat'); };
 
 // ---- tool registry / toggles ----
 const roll = new PianoRoll($('#pianoRoll'));
@@ -1266,6 +1270,12 @@ ALLT.forEach(k => {
   body.addEventListener('pointerdown', () => touchTool(k), true);
 });
 function layoutTools(keep) {
+  const el = document.activeElement, f = el && el !== document.body && $('#toolsCol').contains(el) ? el : null;
+  let sel = null; try { if (f && f.selectionStart != null) sel = [f.selectionStart, f.selectionEnd]; } catch (e) { }
+  layoutToolsNow(keep);
+  if (f && document.activeElement !== f) { f.focus({ preventScroll: true }); if (sel) try { f.setSelectionRange(sel[0], sel[1]); } catch (e) { } }
+}
+function layoutToolsNow(keep) {
   const play = $('#play'), main = $('#main'), A = $('#tcolA'), B = $('#tcolB'), open = SIDE.filter(k => TOOLS[k]);
   const inPlay = TAB === 'quiz' && !play.classList.contains('hidden'), float = !inPlay, col = $('#toolsCol');
   const visible = !(inPlay && document.body.classList.contains('focus'));
@@ -1277,7 +1287,7 @@ function layoutTools(keep) {
     const stacked = inPlay && window.innerWidth < 900, GAP = 12, r = main.getBoundingClientRect();
     const avail = Math.max(120, float ? main.clientHeight - 28 : main.clientHeight - parseFloat(getComputedStyle(play).paddingTop) - 30);
     const bs = document.body.style; bs.setProperty('--side-h', avail + 'px'); bs.setProperty('--tb-h', '10px'); bs.setProperty('--tf-top', (r.top + 14) + 'px');
-    play.classList.remove('two'); SIDE.forEach(k => { A.appendChild(toolEl(k)); toolEl(k).classList.remove('collapsed'); toolEl(k).querySelector('.tool-body').style.maxHeight = ''; });
+    play.classList.remove('two'); SIDE.forEach((k, i) => { if (A.children[i] !== toolEl(k)) A.appendChild(toolEl(k)); toolEl(k).classList.remove('collapsed'); toolEl(k).querySelector('.tool-body').style.maxHeight = ''; });
     const first = toolEl(open[0]); first.classList.add('collapsed'); const HEAD = first.offsetHeight; first.classList.remove('collapsed');
     const H = {}; open.forEach(k => { H[k] = toolEl(k).offsetHeight; AUTO[k] = false; });
     const h = k => TSTATE.coll[k] ? HEAD : H[k], sum = ks => ks.reduce((a, k) => a + h(k), 0) + GAP * Math.max(0, ks.length - 1);
