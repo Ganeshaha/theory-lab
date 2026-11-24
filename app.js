@@ -395,7 +395,7 @@ function renderQuestion(pick) {
   }
   $('#qSeq').classList.toggle('hidden', q.type !== 'seq'); if (q.type !== 'seq') seqStop();
   quizDockNote(); Tools.onQuestion(q); checkBreak();
-  $$('#toolbar button[data-tool]').forEach(b => { const on = TOOL_HINT[q.topic] === b.dataset.tool && !TOOLS[b.dataset.tool]; b.classList.toggle('suggest', on); b.title = on ? 'Handy for this question' : ''; });
+  $$('#toolbar button[data-tool]').forEach(b => { const on = (TOOL_HINT[q.topic] || 'cheat') === b.dataset.tool && !TOOLS[b.dataset.tool]; b.classList.toggle('suggest', on); b.title = on ? 'Handy for this question' : ''; });
   $('#main').scrollTop = 0;
   if (q.audio && $('#autoPlay').checked) setTimeout(() => Snd.play(q.audio), 150);
 }
@@ -483,7 +483,7 @@ function conclude(result, answerText, extra = '') {
   if (r.levelUp) S.levelUps.push(r.levelUp);
   if (ok) { S.score++; S.streak++; S.best = Math.max(S.best, S.streak); }
   else { S.streak = 0; if (!q.retry) S.retry.push({ topic: q.topic, due: S.idx + 3 }); }
-  S.hist.push({ topic: q.topic, ok, prompt: q.prompt, answer: answerText });
+  S.hist.push({ topic: q.topic, ok, prompt: q.prompt, answer: answerText }); if (!ok) noteMiss(q, answerText);
   sfx(r.levelUp ? 'level' : result === 'first' ? 'first' : result === 'later' ? 'later' : 'none');
   $('#qScore').innerHTML = scoreHTML();
   $('#qBar').style.width = S.total ? (S.idx / S.total * 100) + '%' : '0';
@@ -577,6 +577,13 @@ const Flow = {
   },
 };
 
+// ---- mistakes notebook: the last 40 questions missed on the first try ----
+let MISSES = store.get('misses', []);
+function noteMiss(q, answerText) {
+  MISSES = MISSES.filter(m => m.p !== q.prompt); MISSES.unshift({ t: q.topic, p: q.prompt, a: answerText, d: Date.now() });
+  MISSES = MISSES.slice(0, 40); store.set('misses', MISSES);
+}
+
 // ---- status pill in the top bar ----
 function renderStatus() {
   const L = Coach.level(), t = Coach.today(), g = Coach.goal();
@@ -655,10 +662,17 @@ function renderStats() {
     return s ? `<div class="srow"><span>${t.name}${rv}</span><span class="n">${s.c}/${s.t}</span><span class="n">${Math.round(s.c / s.t * 100)}%</span>${meter(s.c / s.t)}</div>`
       : `<div class="srow"><span>${t.name}</span><span class="n">–</span><span class="n"></span><span class="muted small">not tried</span></div>`;
   }).join('')}</div>`).join('');
-  const heat = `<div class="panel"><div class="panel-title">Last 5 weeks</div><div class="heat">${Coach.history(35).map(d => `<i class="h${d.n === 0 ? 0 : d.n < 10 ? 1 : d.n < 25 ? 2 : 3}" title="${d.key}: ${d.n} answers"></i>`).join('')}</div><div class="muted small">${Coach.totalDays()} practice days in total. There's no streak to break: every day you show up counts.</div></div>`;
-  $('#statsBody').innerHTML = `<div class="stats-top">${tiles}${heat}</div><div class="stats-parts">${parts}</div>`;
+  const heat = `<div class="panel"><div class="panel-title">Last 5 weeks</div><div class="heat">${Coach.history(35).map(d => `<i class="h${d.n === 0 ? 0 : d.n < 10 ? 1 : d.n < 25 ? 2 : 3}" title="${d.key}: ${d.n} answers"></i>`).join('')}</div><div class="muted small">${Coach.totalDays()} practice day${Coach.totalDays() === 1 ? '' : 's'}.<br>No streak to break.</div></div>`;
+  const mt = [...new Set(MISSES.map(m => m.t))].filter(t => TOPICS.some(x => x.id === t));
+  const misses = MISSES.length ? `<details class="panel misses" open><summary><span class="panel-title">Recent mistakes</span><span class="muted small">${MISSES.length} question${MISSES.length > 1 ? 's' : ''} · ${mt.length} topic${mt.length > 1 ? 's' : ''}</span><span class="grow"></span><button class="sm primary" id="missDrill">Practise these topics</button><button class="sm ghost" id="missClear">Clear</button></summary>
+    <ul class="missed">${MISSES.slice(0, 12).map(m => `<li><span class="chip">${topicName(m.t)}</span> ${m.p}<div class="a">→ ${m.a}</div></li>`).join('')}</ul></details>` : '';
+  $('#statsBody').innerHTML = `<div class="stats-top">${tiles}${heat}</div>${misses}<div class="stats-parts">${parts}</div>`;
+  if ($('#missDrill')) {
+    $('#missDrill').onclick = e => { e.preventDefault(); showTab('quiz'); startQuiz(mt.slice(0, 6), { total: 10, kind: 'custom' }); };
+    $('#missClear').onclick = e => { e.preventDefault(); MISSES = []; store.set('misses', MISSES); renderStats(); };
+  }
 }
-$('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); Coach.reset(); Learn.reset(); renderStats(); renderSetup(); renderHome(); } };
+$('#resetStats').onclick = () => { if (confirm('Reset all progress?')) { STATS = {}; store.set('stats', STATS); MISSES = []; store.set('misses', MISSES); Coach.reset(); Learn.reset(); renderStats(); renderSetup(); renderHome(); } };
 $('#practiseWeak').onclick = () => startQuiz(weakest(5));
 // Backup / restore: progress lives in this browser only, so this moves it between devices or addresses.
 $('#exportProg').onclick = () => {
@@ -1062,32 +1076,84 @@ function renderTempoTool() {
 $('#tBpm').oninput = renderTempoTool;
 
 // ---- cheat sheet ----
-let CS_TAB = 'int';
+// Every term a question can ask about should be findable here. Each topic opens on its own tab.
+let CS_TAB = 'int', CS_LAST_TOPIC = null;
+const CS_TOPIC_TAB = { keyboard: 'int', intervals: 'int', ear: 'int', triads: 'chord', sevenths: 'chord', extensions: 'chord', bass: 'chord', voicing: 'chord',
+  minor: 'scale', modes: 'scale', penta: 'scale', exotic: 'scale', fifth: 'key', diatonic: 'key', circle: 'key', camelot: 'key', earkey: 'key',
+  melody: 'harm', chromatic: 'harm', songs: 'harm', mediants: 'harm', advanced: 'harm', progressions: 'harm', rhythm: 'rhythm', structure: 'rhythm', tuning: 'sound' };
+function cheatForTopic(topic) {
+  if (topic === CS_LAST_TOPIC) return; CS_LAST_TOPIC = topic;
+  const tab = CS_TOPIC_TAB[topic]; if (!tab || tab === CS_TAB) return;
+  CS_TAB = tab; renderCheat(); if (TOOLS.cheat) layoutTools();
+}
 function renderCheat() {
   $$('#csTabs button').forEach(b => b.classList.toggle('active', b.dataset.cs === CS_TAB));
   const fm = ivs => ivs.map(i => i === 'P1' ? 'R' : DEG[i] || i).join(' ');
   const semis = ivs => ivs.map(i => IV[i][0]), stack = ivs => semis(ivs).slice(1).map((s, k) => s - semis(ivs)[k]).join(' + ');
-  const qualRows = ids => ids.map(id => { const c = CHORDS[id]; return `<tr><td>${c.name.replace(/ \(.*\)/, '')} <span class="muted">C${c.sym}</span></td><td class="mono">${stack(c.iv)}</td><td class="mono">${semis(c.iv).join(' ')}</td></tr>`; }).join('');
+  const short = n => n.replace(/ \(.*\)/, '');
+  const qualRows = ids => ids.map(id => { const c = CHORDS[id]; return `<tr><td>${short(c.name)} <span class="muted">C${c.sym}</span></td><td class="mono">${stack(c.iv)}</td><td class="mono">${semis(c.iv).join(' ')}</td></tr>`; }).join('');
+  const H = t => `<h4>${t}</h4>`, rows = list => list.map(r => `<tr>${r.map((c, i) => `<td${i && r.mono && r.mono.includes(i) ? ' class="mono"' : ''}>${c}</td>`).join('')}</tr>`).join('');
+  const dl = list => `<table class="cs-dl">${list.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>`;
   let h = '';
   if (CS_TAB === 'int') h = `<table><tr><th>Interval</th><th>Semis</th><th>From C</th></tr>${INTS.map(it => `<tr><td>${it.name}</td><td class="mono">${it.s}</td><td>${disp(tr('C', it.id === 'P8' ? 'P1' : it.id))}</td></tr>`).join('')}</table>
-    <p>Inverting: numbers add to 9 (3rd↔6th), major↔minor, perfect stays perfect. 9th = 2nd, 11th = 4th, 13th = 6th.</p>`;
+    ${H('Words')}${dl([['Semitone', 'One key to the very next key, black or white. Also called a half step.'], ['Whole step', '2 semitones (a tone).'], ['Octave', '12 semitones: the same note name, higher or lower.'],
+      ['Tritone', '6 semitones, exactly half an octave. The most tense interval.'], ['Perfect', 'Unison, 4th, 5th and octave. They have no major/minor version.'], ['Inverting', 'Move the bottom note up an octave. Numbers add to 9 (3rd ↔ 6th), major ↔ minor, perfect stays perfect.'],
+      ['Compound', '9th = 2nd, 11th = 4th, 13th = 6th, each an octave higher.']])}`;
   if (CS_TAB === 'chord') h = `<table class="cs-qual"><tr><th>Triad</th><th>Half steps</th><th>From root</th></tr>${qualRows(TRIADS)}
       <tr><th>7th chord</th><th>Half steps</th><th>From root</th></tr>${qualRows(SEVENTHS)}</table>
     <p>Major 3rd = 4 half steps, minor 3rd = 3. A triad is two 3rds stacked; a 7th chord adds a third 3rd on top.</p>
-<table><tr><th>Chord</th><th>Formula</th><th>Half steps</th><th>On C</th></tr>${Object.entries(CHORDS).map(([id, c]) => `<tr><td title="${c.name}">C${c.sym}</td><td class="mono">${fm(c.iv)}</td><td class="mono">${stack(c.iv)}</td><td>${listFmt(chordNotes('C', id))}</td></tr>`).join('')}</table>`;
+    ${H('Every chord: symbol, name, formula')}
+    <table class="cs-all"><tr><th>Symbol</th><th>Name</th><th>Formula</th><th>Half steps</th></tr>${Object.values(CHORDS).map(c => `<tr><td>C${c.sym}</td><td>${short(c.name)}</td><td class="mono">${fm(c.iv)}</td><td class="mono">${stack(c.iv)}</td></tr>`).join('')}</table>
+    ${H('Reading symbols')}${dl([['m', 'minor (Cm). No letter after the root means major.'], ['°', 'diminished (C°): minor 3rd + flat 5th.'], ['ø', 'half-diminished (Cø7), also written m7♭5.'], ['+', 'augmented (C+): major 3rd + sharp 5th.'],
+      ['7', 'dominant 7th: major triad + ♭7. "maj7" uses the natural 7th instead.'], ['sus', 'the 3rd is replaced by the 2nd (sus2) or 4th (sus4).'], ['add9', 'triad + 9th, no 7th. A plain "9" chord includes the ♭7.'], ['5', 'power chord: root and 5th only.']])}
+    ${H('Inversions and slash chords')}
+    <table><tr><th>Position</th><th>In the bass</th><th>C major</th><th>Written</th></tr>${rows([['Root position', 'root', 'C – E – G', 'C'], ['1st inversion', '3rd', 'E – G – C', 'C/E'], ['2nd inversion', '5th', 'G – C – E', 'C/G'], ['3rd inversion', '7th (7th chords)', 'B♭ – C – E – G', 'C7/B♭']])}</table>
+    <p>A slash chord X/Y is chord X played over bass note Y.</p>
+    ${H('Voicing')}${dl([['Closed', 'All the notes fit inside one octave.'], ['Open', 'The notes are spread over more than an octave.'], ['Common tones', 'Notes two chords share. Hold them and move the rest by step for smooth voice leading.'],
+      ['Low register', 'Below about C3, 3rds and other close intervals sound muddy. Use octaves and 5ths down there.']])}`;
   if (CS_TAB === 'scale') h = `<table><tr><th>Scale</th><th>Steps</th><th>Formula</th></tr>${Object.entries(SCALES).map(([id, s]) => `<tr><td>${s.name}</td><td class="mono">${stepPattern(id)}</td><td class="mono">${s.iv.map(i => DEG[i]).join(' ')}</td></tr>`).join('')}</table>
-    <p>Modes vs major/minor: Dorian ♮6 · Phrygian ♭2 · Lydian ♯4 · Mixolydian ♭7 · Locrian ♭2 ♭5.</p>`;
+    <p>W = whole step (2 semitones), H = half step (1), W+H = 3 semitones.</p>
+    ${H('Modes')}
+    <table><tr><th>Mode</th><th>Starts on</th><th>What it is</th><th>Same notes</th></tr>${MODES.map((m, i) => `<tr><td>${MODE_NAMES[m]}</td><td>${ORD[i]} note</td><td>${MODE_DESC[m].replace(/^(a|the) /, '')}</td><td>${disp(tr('C', MODE_OFFSET[m]))} ${MODE_NAMES[m]} = C major</td></tr>`).join('')}</table>
+    <p>The characteristic note is the one that differs from plain major or minor: Dorian ♮6 · Phrygian ♭2 · Lydian ♯4 · Mixolydian ♭7 · Locrian ♭2 ♭5.</p>
+    ${H('Minor scales')}${dl([['Natural', 'The plain minor scale (Aeolian).'], ['Harmonic', 'Natural minor with a raised 7th. It makes the V chord major.'], ['Melodic', 'Natural minor with a raised 6th and 7th.'], ['Relative', 'Major and minor keys with the same notes: C major and A minor. The minor starts on the 6th note of the major.'], ['Parallel', 'Same tonic, different notes: C major and C minor.']])}
+    ${H('Pentatonic and blues')}${dl([['Major pentatonic', 'Major scale without the 4th and 7th.'], ['Minor pentatonic', 'Natural minor without the 2nd and ♭6th.'], ['Blues', 'Minor pentatonic plus the ♭5 (the "blue note").'], ['Relatives', 'A minor pentatonic has the same notes as C major pentatonic.']])}
+    ${H('Exotic scales')}${dl(Object.entries(EXOTIC_FEAT).map(([id, d]) => [SCALES[id].name.replace(/ \(.*\)/, ''), d + '.']))}`;
   if (CS_TAB === 'key') h = `<table>
-      <tr><th>Key</th><th>Triads</th></tr>
+      <tr><th>Key</th><th>Chords</th></tr>
       <tr><td>Major</td><td>I ii iii IV V vi vii°</td></tr>
       <tr><td>Major 7ths</td><td>Imaj7 ii7 iii7 IVmaj7 V7 vi7 viiø7</td></tr>
       <tr><td>Nat. minor</td><td>i ii° III iv v VI VII</td></tr>
       <tr><td>Minor 7ths</td><td>i7 iiø7 IIImaj7 iv7 v7 VImaj7 VII7</td></tr>
-      <tr><td>Harm. minor</td><td>…V (major) and vii° from the raised 7th</td></tr></table>
-    <p><b>Function:</b> Tonic (home) I iii vi · Subdominant (away) ii IV · Dominant (tension) V vii°.</p>
-    <p><b>Relative minor</b> = 6th degree (3 semitones down). <b>Circle:</b> clockwise = up a 5th = +1 sharp. Sharps F C G D A E B; flats B E A D G C F.</p>
-    <p><b>Camelot:</b> same number = relative keys; ±1 = neighbours on the circle; 8B = C major, 8A = A minor.</p>
-    <p><b>Cadences:</b> V→I authentic · IV→I plagal · →V half · V→vi deceptive.</p>`;
+      <tr><td>Harm. minor</td><td>V becomes major, and vii° appears, from the raised 7th</td></tr></table>
+    <p>Roman numerals: upper-case = major chord, lower-case = minor, ° = diminished. The number is the scale degree the chord is built on.</p>
+    ${H('Scale degrees')}
+    <table><tr><th>Degree</th><th>Name</th><th>Chord in major</th></tr>${DEG_NAMES.map((n, i) => `<tr><td>${i + 1}</td><td>${n}${i === 6 ? ' (a half step below the tonic)' : ''}</td><td>${['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'][i]} ${['major', 'minor', 'minor', 'major', 'major', 'minor', 'diminished'][i]}</td></tr>`).join('')}</table>
+    ${H('Key signatures')}
+    <table><tr><th>Major</th><th>Rel. minor</th><th>Signature</th><th>Camelot</th></tr>${MAJOR_KEYS.map(k => `<tr><td>${disp(k)}</td><td>${disp(tr(k, 'M6'))}m</td><td>${keySig(k).replace('No sharps or flats', 'none')}</td><td class="mono">${camOf(k, 'B')} / ${camOf(tr(k, 'M6'), 'A')}</td></tr>`).join('')}</table>
+    ${dl([['Order of sharps', 'F C G D A E B'], ['Order of flats', 'B E A D G C F'], ['Circle of fifths', 'Clockwise = up a 5th = one more sharp. Neighbours differ by one note.'], ['Relative minor', 'The 6th degree of the major key (3 semitones below the tonic).'],
+      ['Camelot', 'Same number = relative keys (8B C major, 8A A minor). ±1 with the same letter = a 5th away. Safe mixes: same code, ±1, or switch letter.']])}`;
+  if (CS_TAB === 'harm') h = `${H('Chord function')}${dl([['Tonic', 'Home, at rest: I, iii, vi.'], ['Subdominant', 'Moving away: ii, IV.'], ['Dominant', 'Tension that wants to resolve home: V, vii°.'], ['Diatonic', 'Using only notes of the key.'], ['Chromatic', 'A note or chord from outside the key.']])}
+    ${H('Cadences (how a phrase ends)')}<table><tr><th>Cadence</th><th>Chords</th><th>Feels like</th></tr>${rows([['Authentic', 'V → I', 'a full stop'], ['Plagal', 'IV → I', 'a gentle "amen"'], ['Half', 'ends on V', 'a comma, unfinished'], ['Deceptive', 'V → vi', 'a surprise']])}</table>
+    ${H('Melody')}${dl([['Chord tone', 'A note of the chord playing underneath. The most stable choice.'], ['Passing tone', 'Steps between two chord tones.'], ['Neighbour tone', 'Steps away from a chord tone and straight back.'], ['Step', 'Moving to the next note of the scale (conjunct motion).'],
+      ['Leap', 'Jumping a 3rd or more (disjunct motion).'], ['Leading tone', 'The 7th degree, a half step below the tonic. It pulls up to home.'], ['Chromatic passing tone', 'An out-of-key note that fills the gap between two notes a whole step apart.']])}
+    ${H('Colour chords')}${dl([['Secondary dominant', 'V7/x: the dominant 7th a 5th above chord x. In C: V7/V = D7, which pulls to G.'], ['Borrowed chord', 'Taken from the parallel minor into a major key: iv, ♭III, ♭VI, ♭VII. In C: Fm, E♭, A♭, B♭.'],
+      ['Neapolitan', '♭II: a major chord a half step above the tonic. In C minor: D♭.'], ['Tritone substitute', 'Replace V7 with the dominant 7th a tritone away. In C: G7 → D♭7.'], ['Picardy third', 'A minor-key piece that ends on the major tonic chord.'],
+      ['Chromatic mediant', 'A chord a major or minor 3rd away with the same quality. From C: E, E♭, A, A♭. They share just one note.'], ['Harmonic-minor V', 'In a minor key the v chord is made major (V) for a stronger pull home.']])}
+    ${H('Common progressions')}<table><tr><th>Name</th><th>Chords</th><th>Mood</th></tr>${PROG_LIB.map(p => `<tr><td>${p.name}</td><td>${progLabel(p.romans)}</td><td>${p.mood} · ${p.mode}</td></tr>`).join('')}</table>`;
+  if (CS_TAB === 'rhythm') h = `${H('The 16-step grid (one bar of 4/4)')}
+    <table><tr><th>Count</th><th>Steps</th><th>Used for</th></tr>${rows([['Beats 1 2 3 4', '1 · 5 · 9 · 13', 'four-on-the-floor kick'], ['Beats 2 and 4', '5 · 13', 'backbeat clap or snare'], ['The "&"', '3 · 7 · 11 · 15', 'off-beat hats'], ['The "e"', '2 · 6 · 10 · 14', ''], ['The "a"', '4 · 8 · 12 · 16', '']])}</table>
+    <p>Each beat is 4 steps, counted "1 e & a".</p>
+    ${H('Note lengths')}<table><tr><th>Note</th><th>Per bar</th><th>Steps</th></tr>${rows([['Whole (1 bar)', '1', '16'], ['Half', '2', '8'], ['Quarter (1 beat)', '4', '4'], ['8th', '8', '2'], ['16th', '16', '1']])}</table>
+    ${dl([['Dotted', '1.5 × the length.'], ['Triplet', '3 notes in the space of 2.'], ['1 beat in ms', '60 000 ÷ BPM. At 120 BPM a beat is 500 ms.'], ['Bars per minute', 'BPM ÷ 4. Sixteen bars at 128 BPM last 30 s.']])}
+    ${H('Feel')}${dl([['Syncopation', 'Accenting the off-beats or weak parts of the bar.'], ['Swing', 'Delaying every second 8th or 16th note for a shuffled feel.'], ['Polyrhythm', 'Two different divisions at once, such as 3 against 4.'], ['Half-time', 'Clap on beat 3 instead of 2 and 4, so it feels half as fast.'], ['Tresillo', 'The 3 + 3 + 2 pattern: steps 1, 4, 7.']])}
+    ${H('Typical tempos')}<table><tr><th>Genre</th><th>BPM</th></tr>${rows([['Hip-hop / boom-bap', '85–95'], ['House', '120–128'], ['Dubstep', '~140 (half-time feel)'], ['Drum & bass', '170–176']])}</table>
+    ${H('Song sections')}${dl([['Intro / Outro', 'Sparse, mostly drums and simple parts, easy for DJs to mix.'], ['Build-up', 'Rising tension: risers, snare rolls, filter sweeps. The kick often drops out.'], ['Drop', 'The peak: full drums and bass, the main hook.'], ['Breakdown', 'Energy pulls back and the chords and melody are exposed.'],
+      ['Lengths', 'Sections usually last 8, 16 or 32 bars. A 32-bar intro plus a 16-bar build puts the drop on bar 49.'], ['Before the drop', 'End the build on the V chord of the drop\'s chord for the strongest pull.']])}`;
+  if (CS_TAB === 'sound') h = `${H('Pitch and frequency')}${dl([['Octave', 'Doubles the frequency. A4 = 440 Hz, A3 = 220, A2 = 110, A1 = 55.'], ['Cents', '100 cents = 1 semitone. 1200 cents = 1 octave.'], ['MIDI numbers', '60 = middle C (C4; Ableton calls it C3). 69 = A4. Add 12 for each octave up.'], ['Synth "Semi" knob', 'Transposes in semitones: +12 is an octave up, +7 is a 5th up.']])}
+    ${H('Sub and 808 notes')}<table><tr><th>Note</th><th>Hz</th><th>Note</th><th>Hz</th></tr>${range(0, 5).map(i => { const f = m => (440 * Math.pow(2, (m - 69) / 12)).toFixed(1); return `<tr><td>${disp(DEFAULT_NAMES[i])}1</td><td class="mono">${f(24 + i)}</td><td>${disp(DEFAULT_NAMES[i + 6])}1</td><td class="mono">${f(30 + i)}</td></tr>`; }).join('')}</table>
+    <p>Double the number for the octave above (E1 41.2 → E2 82.4). Tune the kick or 808 to the root of your key.</p>
+    ${H('Harmonics (overtones)')}<table><tr><th>Harmonic</th><th>Frequency</th><th>Pitch above the note</th></tr>${rows([['1', '1×', 'the note itself (fundamental)'], ['2', '2×', '1 octave'], ['3', '3×', 'octave + 5th'], ['4', '4×', '2 octaves'], ['5', '5×', '2 octaves + major 3rd'], ['6', '6×', '2 octaves + 5th'], ['7', '7×', '2 octaves + ♭7 (a little flat)'], ['8', '8×', '3 octaves']])}</table>`;
   $('#csBody').innerHTML = h;
 }
 $$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; renderCheat(); layoutTools('cheat'); });
@@ -1095,7 +1161,7 @@ $$('#csTabs button').forEach(b => b.onclick = () => { CS_TAB = b.dataset.cs; ren
 // ---- tool registry / toggles ----
 const roll = new PianoRoll($('#pianoRoll'));
 const Tools = {
-  onQuestion(q) { if (TOOLS.roll && roll.follow) roll.load(q, false); },
+  onQuestion(q) { if (TOOLS.roll && roll.follow) roll.load(q, false); cheatForTopic(q.topic); },
   onAnswer(q) { if (TOOLS.roll && roll.follow) roll.load(q, true); },
   stop() { roll.stop(); },
 };
@@ -1177,6 +1243,7 @@ $$('#toolbar button[data-tool]').forEach(b => b.onclick = () => {
   if (TOOLS[k] && k !== 'piano') { TSTATE.coll[k] = false; touchTool(k); }
   applyTools(k);
   if (k === 'roll' && TOOLS.roll && S.q) roll.load(S.q, S.answered);
+  if (k === 'cheat' && TOOLS.cheat && S.q) { CS_LAST_TOPIC = null; cheatForTopic(S.q.topic); }
   if (TOOLS[k] && k !== 'piano') { const el = toolEl(k); requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
 });
 $('#toolsClose').onclick = () => { ALLT.forEach(k => TOOLS[k] = false); applyTools(); };
