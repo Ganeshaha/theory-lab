@@ -847,3 +847,19 @@ body.tools-float-open .tools-float { display: block; }
 .tools-float .tool { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 18px 40px -12px rgba(0, 0, 0, .8); }
 body.tools-float-open #main { padding-right: 396px; }
 .brand { cursor: pointer; } .brand:hover .logo { filter: brightness(1.15); }
+
+/* ============ settings behind the gear; lessons switched off ============ */
+.gear { flex: none; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%; background: rgba(255, 255, 255, .03); border-color: var(--hair); color: var(--muted); }
+.gear:hover, .gear[aria-expanded=true] { color: var(--text); background: rgba(255, 255, 255, .08); }
+body.focus.in-play .gear { display: none; }
+.settings-pop { position: fixed; z-index: 30; top: 58px; right: 16px; width: 290px; display: flex; flex-direction: column; gap: 11px; padding: 16px 18px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line2); box-shadow: 0 24px 60px -12px rgba(0, 0, 0, .85); }
+.settings-pop.hidden { display: none; }
+.settings-pop h4 { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent2); }
+.settings-pop h4:first-child { margin-top: 0; }
+.settings-pop .switch { justify-content: space-between; flex-direction: row-reverse; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); font-size: 14px; }
+.set-row select { padding: 4px 10px; font-size: 13px; }
+.set-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pnode.off, .lcard.off { opacity: .45; border-style: dashed; box-shadow: none; }
+.pnode.off .tag, .lc-off { color: var(--dim); }
+.lc-off { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }

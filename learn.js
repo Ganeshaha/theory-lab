@@ -12,19 +12,19 @@ const Learn = (() => {
   function renderMap() {
     const done = order.filter(id => learned.has(id)).length;
     $('#learnProgress').innerHTML = `<b>${done}</b> of ${order.length} lessons read`;
-    const next = order.find(id => !learned.has(id));
+    const next = order.find(id => !learned.has(id) && !isOff(id));
     $('#learnParts').innerHTML = [1, 2, 3, 4].map(p => `
       <div class="lpart"><div class="lpart-title">${PART_NAMES[p]}</div><div class="lgrid">
       ${TOPICS.filter(t => t.part === p).map(t => {
-        const c = COURSE[t.id], read = learned.has(t.id), b = Coach.box(t.id);
-        return `<button class="lcard ${read ? 'read' : ''} ${t.id === next ? 'next' : ''}" data-t="${t.id}">
-          <span class="lc-top"><span class="lc-num">${order.indexOf(t.id) + 1}</span>${read ? '<span class="lc-done">✓ read</span>' : t.id === next ? '<span class="lc-next">Up next</span>' : ''}</span>
+        const c = COURSE[t.id], read = learned.has(t.id), b = Coach.box(t.id), off = isOff(t.id);
+        return `<button class="lcard ${read ? 'read' : ''} ${t.id === next ? 'next' : ''} ${off ? 'off' : ''}" data-t="${t.id}" title="Right-click to turn ${off ? 'on' : 'off'}">
+          <span class="lc-top"><span class="lc-num">${order.indexOf(t.id) + 1}</span>${off ? '<span class="lc-off">Off</span>' : read ? '<span class="lc-done">✓ read</span>' : t.id === next ? '<span class="lc-next">Up next</span>' : ''}</span>
           <span class="lc-name">${t.name}</span>
           <span class="lc-meta">${c.book} · ${c.mins} min · ${c.cards.length} cards</span>
           <span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span>
         </button>`;
       }).join('')}</div></div>`).join('');
-    $$('#learnParts .lcard').forEach(b => b.onclick = () => open(b.dataset.t));
+    $$('#learnParts .lcard').forEach(b => { b.onclick = () => open(b.dataset.t); b.oncontextmenu = e => { e.preventDefault(); toggleOff(b.dataset.t); }; });
   }
 
   // ---------- reader ----------
@@ -87,7 +87,7 @@ const Learn = (() => {
     setDock('', [], true);
     $('#main').scrollTop = 0;
   }
-  const nextId = () => order[order.indexOf(L.id) + 1];
+  const nextId = () => order.slice(order.indexOf(L.id) + 1).find(id => !isOff(id));
   function go(i) { const n = COURSE[L.id].cards.length; if (i < 0 || i > n) return; L.i = i; render(); }
   function open(id) {
     L.id = id; L.i = 0; cheatForTopic(id);

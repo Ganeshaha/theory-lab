@@ -34,6 +34,7 @@
           <button id="focusBtn" data-focus aria-pressed="false" title="Hide everything except the question (F)">Focus <kbd>F</kbd></button>
         </div>
     <button id="statusPill" class="status" title="Your level and today's goal. Click for Progress."></button>
+    <button id="gearBtn" class="gear" title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div></header>
 
   <main id="main">
@@ -83,21 +84,10 @@
           <div class="seg" id="qCount" role="radiogroup" aria-label="Number of questions">
             <button data-n="10">10</button><button data-n="20" class="active">20</button><button data-n="30">30</button><button data-n="0">∞</button>
           </div>
-          <label class="switch" title="Wrong answers let you try again; hints and 'show answer' available. Stats count first tries only."><input type="checkbox" id="learnMode" checked><span></span> Learning mode</label>
-          <label class="switch"><input type="checkbox" id="autoPlay" checked><span></span> Auto-play sound</label>
-          <label class="switch"><input type="checkbox" id="weakFirst"><span></span> Favour weak topics</label>
           <button id="startBtn" class="primary lg">Start ▸</button>
         </div>
         </details>
 
-        <div class="settings-row">
-          <label class="switch"><input type="checkbox" id="sfx" checked><span></span> Reward sounds</label>
-          <label class="field-inline">Daily goal
-            <select id="goalSel"><option value="10">10 answers</option><option value="15">15 answers</option><option value="25">25 answers</option><option value="40">40 answers</option></select>
-          </label>
-          <button id="midiBtn2" class="sm midi-btn">🎹 Connect MIDI keyboard</button>
-          <button id="installBtn" class="sm hidden">⤓ Install as an app</button>
-        </div>
       </div>
 
       <!-- play -->
@@ -334,6 +324,30 @@
   </main>
 
   <aside class="tools-float" id="toolsFloat" aria-label="Tools"></aside>
+  <div class="settings-pop hidden" id="settingsPop" role="dialog" aria-label="Settings">
+    <h4>Practice</h4>
+    <label class="switch" title="Wrong answers let you try again; hints and 'show answer' available. Stats count first tries only."><input type="checkbox" id="learnMode" checked><span></span> Learning mode</label>
+    <label class="switch"><input type="checkbox" id="autoPlay" checked><span></span> Auto-play sound</label>
+    <label class="switch"><input type="checkbox" id="weakFirst"><span></span> Favour weak topics</label>
+    <label class="switch"><input type="checkbox" id="sfx" checked><span></span> Reward sounds</label>
+    <label class="set-row">Daily goal
+      <select id="goalSel"><option value="10">10 answers</option><option value="15">15 answers</option><option value="25">25 answers</option><option value="40">40 answers</option></select>
+    </label>
+    <h4>Keyboard</h4>
+    <label class="switch" title="Show each question's key on the keyboard automatically"><input type="checkbox" id="dkAuto" checked><span></span> Show the question key</label>
+    <label class="set-row" title="How black keys are labelled on the piano">Key labels
+      <select id="labelMode">
+        <option value="both">C♯ / D♭</option>
+        <option value="sharp">Sharps</option>
+        <option value="flat">Flats</option>
+        <option value="off">Hidden</option>
+      </select>
+    </label>
+    <div class="set-btns">
+      <button id="midiBtn2" class="sm midi-btn">🎹 Connect MIDI keyboard</button>
+      <button id="installBtn" class="sm hidden">⤓ Install as an app</button>
+    </div>
+  </div>
   <footer class="dock" id="dock">
     <div class="dock-head">
       <span id="dockNote" class="muted small"></span>
@@ -343,16 +357,6 @@
         <span>Key</span><select id="dkRoot" aria-label="Key root"></select><select id="dkType" aria-label="Key type"></select>
       </label>
       <button id="dkFromQ" class="ghost sm" title="Set the key from the current question (K)">Question key</button>
-      <label class="switch dkauto" title="Show each question's key on the keyboard automatically"><input type="checkbox" id="dkAuto" checked><span></span> Auto</label>
-      <label class="lblmode" title="How black keys are labelled on the piano">
-        <span>Labels</span>
-        <select id="labelMode">
-          <option value="both">C♯ / D♭</option>
-          <option value="sharp">Sharps</option>
-          <option value="flat">Flats</option>
-          <option value="off">Hidden</option>
-        </select>
-      </label>
       <button id="midiBtn" class="ghost sm midi-btn" title="Connect a MIDI keyboard">🎹 MIDI</button>
       <button id="dockToggle" class="ghost sm" aria-expanded="true" title="Show or hide the piano">▾ Hide</button>
     </div>

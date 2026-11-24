@@ -45,6 +45,8 @@ const Coach = (() => {
     return e.box >= 4 ? 'strong' : 'learning';
   }
   const box = id => srs[id] ? srs[id].box : -1;
+  // Topics the learner switched off (right-click a lesson) are left out of plans and "up next".
+  const live = () => { const off = get('off', []); return ORDER.filter(id => !off.includes(id)); };
   const recentAcc = () => recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : null;
 
   function onResult(topic, result) {
@@ -65,8 +67,8 @@ const Coach = (() => {
   // Build today's plan: an array of { topic, lesson? } question slots.
   function buildPlan(n = 10) {
     const now = Date.now(), acc = recentAcc();
-    const introduced = ORDER.filter(id => srs[id]);
-    const fresh = ORDER.filter(id => !srs[id] && id !== 'ear');
+    const on = live(), introduced = on.filter(id => srs[id]);
+    const fresh = on.filter(id => !srs[id] && id !== 'ear');
     const due = introduced.filter(id => srs[id].due <= now).sort((a, b) => srs[a].box - srs[b].box || srs[a].due - srs[b].due);
 
     let newCount = introduced.length < 2 ? 2 : 1, mode = 'normal';
@@ -83,7 +85,7 @@ const Coach = (() => {
     let pool = due.slice(0, 6);
     if (pool.length < 3) pool = pool.concat(introduced.filter(id => !pool.includes(id)).sort((a, b) => srs[a].box - srs[b].box).slice(0, 4 - pool.length));
     pool = pool.concat(news);
-    if (!pool.length) pool = [ORDER[0]];
+    if (!pool.length) pool = [on[0] || ORDER[0]];
     let last = plan.length ? plan[plan.length - 1].topic : null;
     while (plan.length < n) {
       const opts = pool.filter(id => id !== last), id = opts.length ? opts[Math.floor(Math.random() * opts.length)] : pool[0];
@@ -107,7 +109,7 @@ const Coach = (() => {
     dueIn: id => srs[id] ? Math.ceil((srs[id].due - Date.now()) / DAY) : null,
     xp: () => xp, totalDays: () => Object.keys(days).length, today: () => days[dateKey()] || 0,
     goal: () => get('goal', 15), setGoal: g => set('goal', g),
-    nextNew: () => ORDER.find(id => !srs[id] && id !== 'ear'),
+    nextNew: () => live().find(id => !srs[id] && id !== 'ear'),
     reset: () => { srs = {}; xp = 0; days = {}; recent = []; save(); },
   };
 })();

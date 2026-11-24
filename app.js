@@ -140,8 +140,16 @@ const topicName = id => (TOPICS.find(t => t.id === id) || { name: id }).name;
 const PART_NAMES = { 1: 'Part 1 · Foundations', 2: 'Part 2 · Minor, songs & writing', 3: 'Part 3 · Advanced harmony', 4: 'Part 4 · Producer toolkit' };
 const accColor = a => a >= 0.8 ? 'var(--good)' : a >= 0.5 ? 'var(--warn)' : 'var(--bad)';
 const meter = a => `<div class="meter"><div style="width:${Math.round(a * 100)}%;background:${accColor(a)}"></div></div>`;
+// ---- lessons switched off: right-click a lesson or topic. They stay readable but are skipped by the daily plan and the course flow. ----
+let OFF = new Set(store.get('off', []).filter(id => TOPICS.some(t => t.id === id)));
+const isOff = id => OFF.has(id);
+function toggleOff(id) {
+  OFF.has(id) ? OFF.delete(id) : OFF.add(id); store.set('off', [...OFF]);
+  if (OFF.has(id)) SELECTED.delete(id);
+  renderSetup(); renderHome(); Learn.renderMap();
+}
 function weakest(n) {
-  return TOPICS.map(t => ({ id: t.id, a: acc(t.id) })).sort((x, y) => (x.a === null ? 0.55 : x.a) - (y.a === null ? 0.55 : y.a)).slice(0, n).map(x => x.id);
+  return TOPICS.filter(t => !isOff(t.id)).map(t => ({ id: t.id, a: acc(t.id) })).sort((x, y) => (x.a === null ? 0.55 : x.a) - (y.a === null ? 0.55 : y.a)).slice(0, n).map(x => x.id);
 }
 
 // ---------------- tabs & labels ----------------
@@ -202,7 +210,7 @@ function renderSetup() {
 function updateCount() { $('#selCount').textContent = SELECTED.size; $('#startBtn').disabled = !SELECTED.size; store.set('topics', [...SELECTED]); }
 $$('#presets button').forEach(b => b.onclick = () => {
   const p = b.dataset.preset;
-  SELECTED = new Set(p === 'all' ? TOPICS.map(t => t.id) : p === 'none' ? [] : p === 'weak' ? weakest(5) : TOPICS.filter(t => t.part === +p).map(t => t.id));
+  SELECTED = new Set((p === 'all' ? TOPICS.map(t => t.id) : p === 'none' ? [] : p === 'weak' ? weakest(5) : TOPICS.filter(t => t.part === +p).map(t => t.id)).filter(id => !isOff(id)));
   renderSetup();
 });
 $$('#qCount button').forEach(b => b.onclick = () => { QCOUNT = +b.dataset.n; store.set('qcount', QCOUNT); renderSetup(); });
@@ -558,7 +566,7 @@ const Flow = {
   read: id => store.get('learned', []).includes(id),
   // The next step on the course: the first topic whose lesson is unread or that hasn't been practised (lesson first, then its questions).
   course() {
-    const first = TOPICS.find(t => !Flow.read(t.id) || Coach.status(t.id) === 'new'), id = first && first.id, unread = null;
+    const first = TOPICS.find(t => !isOff(t.id) && (!Flow.read(t.id) || Coach.status(t.id) === 'new')), id = first && first.id, unread = null;
     if (id) {
       const t = TOPICS.find(x => x.id === id), n = TOPICS.indexOf(t) + 1;
       return Flow.read(id)
@@ -592,6 +600,12 @@ function renderStatus() {
 }
 $('#statusPill').onclick = () => $('.tab[data-tab=stats]').click();
 
+// ---- settings (gear in the top bar) ----
+function setGear(on) { $('#settingsPop').classList.toggle('hidden', !on); $('#gearBtn').setAttribute('aria-expanded', on ? 'true' : 'false'); }
+$('#gearBtn').onclick = e => { e.stopPropagation(); setGear($('#settingsPop').classList.contains('hidden')); };
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#settingsPop, #gearBtn')) setGear(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#settingsPop').classList.contains('hidden')) { e.stopPropagation(); setGear(false); $('#gearBtn').focus(); } }, true);
+
 // ---- home ----
 function renderHome() {
   renderStatus();
@@ -610,16 +624,16 @@ function renderHome() {
   const td = Coach.totalDays(); $('#daysTotal').textContent = td ? `${td} practice day${td > 1 ? 's' : ''} in total` : 'Your first day starts now';
   const next = Coach.nextNew();
   const node = t => {
-    const st = Coach.status(t.id), b = Coach.box(t.id), tag = t.id === next ? 'Up next' : st === 'due' ? 'Review' : st === 'strong' ? '★' : '';
-    return `<button class="pnode ${st} ${t.id === next ? 'next' : ''}" data-t="${t.id}" title="${t.name}: ${st}"><span class="pt"><span class="dot st-${st}"></span><span class="pn">${TOPICS.indexOf(t) + 1}</span>${t.name}<span class="tag">${tag}</span></span><span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span></button>`;
+    const st = Coach.status(t.id), b = Coach.box(t.id), off = isOff(t.id), tag = off ? 'Off' : t.id === next ? 'Up next' : st === 'due' ? 'Review' : st === 'strong' ? '★' : '';
+    return `<button class="pnode ${st} ${t.id === next ? 'next' : ''} ${off ? 'off' : ''}" data-t="${t.id}" title="${t.name}: ${off ? 'off' : st}. Right-click to turn ${off ? 'on' : 'off'}."><span class="pt"><span class="dot st-${st}"></span><span class="pn">${TOPICS.indexOf(t) + 1}</span>${t.name}<span class="tag">${tag}</span></span><span class="bars">${[1, 2, 3, 4, 5].map(k => `<b class="${b >= k ? 'f' : ''}"></b>`).join('')}</span></button>`;
   };
   // One group per Part; only the Parts you're working in are open, to keep the page calm.
   $('#path').innerHTML = [1, 2, 3, 4].map(p => {
-    const ts = TOPICS.filter(t => t.part === p), started = ts.filter(t => Coach.status(t.id) !== 'new').length, due = ts.filter(t => Coach.status(t.id) === 'due').length;
-    const open = ts.some(t => t.id === next) || due > 0;
-    return `<details class="pgroup" ${open ? 'open' : ''}><summary><b>${PART_NAMES[p]}</b><span class="muted small">${started}/${ts.length} started${due ? ` · <span class="duetxt">${due} to review</span>` : ''}</span><span class="pmini">${ts.map(t => `<i class="st-${Coach.status(t.id)}"></i>`).join('')}</span></summary><div class="path">${ts.map(node).join('')}</div></details>`;
+    const ts = TOPICS.filter(t => t.part === p), started = ts.filter(t => Coach.status(t.id) !== 'new').length, due = ts.filter(t => Coach.status(t.id) === 'due' && !isOff(t.id)).length;
+    const was = $(`#path .pgroup[data-p="${p}"]`), open = was ? was.open : ts.some(t => t.id === next) || due > 0;
+    return `<details class="pgroup" data-p="${p}" ${open ? 'open' : ''}><summary><b>${PART_NAMES[p]}</b><span class="muted small">${started}/${ts.length} started${due ? ` · <span class="duetxt">${due} to review</span>` : ''}</span><span class="pmini">${ts.map(t => `<i class="st-${Coach.status(t.id)}"></i>`).join('')}</span></summary><div class="path">${ts.map(node).join('')}</div></details>`;
   }).join('');
-  $$('#path .pnode').forEach(b => b.onclick = () => startTopic(b.dataset.t));
+  $$('#path .pnode').forEach(b => { b.onclick = () => startTopic(b.dataset.t); b.oncontextmenu = e => { e.preventDefault(); toggleOff(b.dataset.t); }; });
 }
 
 // ---- focus mode ----
