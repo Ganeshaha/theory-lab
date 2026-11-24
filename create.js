@@ -281,7 +281,7 @@ const Create = (() => {
   const leadNote = row => { Snd.ensure(); synth(rowMidi(row), Snd.ctx.currentTime + 0.01, 0.3, 0.2, 'lead'); };
   function renderMel() {
     const el = $('#crMel'), cols = melCols();
-    if (!cols) { el.innerHTML = '<span class="muted small">Add chords first, then write a melody over them.</span>'; $('#melStat').textContent = ''; return; }
+    if (!cols) { el.innerHTML = '<span class="muted small">Add chords first.</span>'; $('#melStat').textContent = ''; return; }
     const names = scaleNotes(CR.root, scaleId()), cp = barChordPcs();
     let h = `<div class="mel-grid" style="grid-template-columns:34px repeat(${cols}, minmax(15px, 1fr))">`;
     for (let row = 14; row >= 0; row--) {

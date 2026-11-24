@@ -46,7 +46,7 @@ const Midi = (() => {
   }
   function status(text, on, title) {
     $$('.midi-btn').forEach(b => { b.textContent = b.id === 'midiBtn' ? (on ? '🎹 MIDI ✓' : '🎹 MIDI') : text; b.classList.toggle('on', !!on); b.title = title || text; });
-    const h = $('#pianoHint'); if (h) h.textContent = on ? '🎹 Play the notes on your MIDI keyboard (together as a chord to submit), or click the keys.' : '🎹 Click keys on the piano to select them.';
+    const h = $('#pianoHint'); if (h) h.textContent = on ? '🎹 MIDI connected' : '';
   }
   function bind() {
     devices = []; access.inputs.forEach(inp => { inp.onmidimessage = onMsg; devices.push(inp.name); });

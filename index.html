@@ -45,14 +45,14 @@
 
         <div class="panel">
           <div class="path-head">
-            <div><div class="panel-title">Your path</div><p class="muted small">Follows the course order. Click any topic for a focused 8-question session (with a mini-lesson if it's new).</p></div>
+            <div class="panel-title">Your path</div>
             <div class="path-legend"><span><i class="st-new"></i>New</span><span><i class="st-due"></i>Review due</span><span><i class="st-learning"></i>Learning</span><span><i class="st-strong"></i>Strong</span></div>
           </div>
           <div id="path"></div>
         </div>
 
         <details class="panel custom" id="customBox">
-          <summary><span>Custom session</span> <span class="muted small">pick your own topics, length and options</span></summary>
+          <summary><span>Custom session</span></summary>
         <div class="presets" id="presets">
           <span class="muted small">Quick pick:</span>
           <button data-preset="all">Everything</button>
@@ -118,7 +118,7 @@
               <button id="replayBtn" class="play-btn hidden">▶ Play sound <kbd>R</kbd></button>
               <div id="qOpts"></div>
               <div id="qPianoCtl" class="pianoctl hidden">
-                <span id="pianoHint">🎹 Click keys on the piano to select them.</span>
+                <span id="pianoHint"></span>
                 <span class="grow"></span>
                 <button id="pClear">Clear</button>
                 <button id="pSubmit" class="primary">Submit <kbd>Enter</kbd></button>
@@ -127,7 +127,7 @@
                 <div class="seq" id="seqGrid"></div>
                 <div class="pianoctl">
                   <button id="seqPlay">▶ Play</button>
-                  <span>Click steps to switch them on. Count "1 e &amp; a".</span>
+                  
                   <span class="grow"></span>
                   <button id="seqClear">Clear</button>
                   <button id="seqSubmit" class="primary">Submit <kbd>Enter</kbd></button>
@@ -161,8 +161,7 @@
             </div>
             <div class="tool panel hidden" id="tool-finder">
               <div class="tool-head"><span>🔍 Chord finder</span><button class="ghost sm" data-close="finder" aria-label="Close">✕</button></div>
-              <p class="muted small">Toggle notes to name the chord or interval.</p>
-              <div class="pcgrid" id="cfGrid"></div>
+                            <div class="pcgrid" id="cfGrid"></div>
               <div id="cfOut" class="cfout"></div>
             </div>
             <div class="tool panel hidden" id="tool-tempo">
@@ -190,7 +189,7 @@
       <div class="wrap">
         <div id="learnMap">
           <div class="page-head">
-            <div><h1>Learn</h1><p class="muted">Short, interactive lessons that follow the course and book. Read one (3–6 minutes), then practise it.</p></div>
+            <div><h1>Learn</h1></div>
             <div id="learnProgress" class="muted"></div>
           </div>
           <div id="learnParts"></div>
@@ -211,9 +210,9 @@
               <label class="field"><span class="field-label">BPM</span><input type="number" id="crBpm" value="124" min="60" max="200"></label>
             </div>
 
-            <div class="cr-label">Chords in this key <span class="muted small">(click to add)</span></div>
+            <div class="cr-label">Chords in this key</div>
             <div class="pads" id="crPads"></div>
-            <div class="cr-label">Colour chords <span class="muted small">(borrowed &amp; secondary, used for emotion)</span></div>
+            <div class="cr-label">Colour chords</div>
             <div class="pads" id="crColor"></div>
 
             <div class="challenge" id="crChal">
@@ -230,7 +229,7 @@
           </div>
 
           <div class="panel cr-main">
-            <div class="cr-label cr-loophead"><span>Your loop <span class="muted small">(1 bar each · click a chord to remove · up to 8)</span></span><span class="grow"></span><button id="crUndo" class="ghost sm" title="Undo">↶ Undo</button><button id="crClear" class="ghost sm">Clear</button></div>
+            <div class="cr-label cr-loophead"><span>Your loop</span><span class="grow"></span><button id="crUndo" class="ghost sm" title="Undo">↶ Undo</button><button id="crClear" class="ghost sm">Clear</button></div>
             <div class="slots" id="crSlots"></div>
 
             <div class="btnrow cr-transport">
@@ -240,7 +239,7 @@
               <span class="grow"></span>
               <button id="crExport">⤓ Export MIDI</button>
             </div>
-            <div class="cr-label">Melody <span class="muted small">(click the grid · rows are the notes of your key · brighter cells are chord tones)</span></div>
+            <div class="cr-label">Melody</div>
             <div class="btnrow mel-ctl">
               <label class="switch"><input type="checkbox" id="melOn" checked><span></span> Play melody</label>
               <label class="field-inline">Note <select id="melLen"><option value="1">1/8</option><option value="2" selected>1/4</option><option value="4">1/2</option><option value="8">1 bar</option></select></label>
@@ -262,8 +261,7 @@
               <label class="switch" title="Pick the inversion of each chord that moves the least, so it sounds smoother"><input type="checkbox" id="crLead" checked><span></span> Smooth voice leading</label>
             </div>
             <div class="panel-title" style="margin-top:18px">Starter progressions</div>
-            <p class="muted small">Click one to load it into your key, then change a chord and hear what happens.</p>
-            <div id="crLib" class="lib"></div>
+                        <div id="crLib" class="lib"></div>
           </div>
         </div>
       </div>
@@ -308,8 +306,7 @@
           <div class="ex-side">
           <div class="panel">
             <div class="panel-title">Circle of fifths</div>
-            <p class="muted small">Click a key. Outer ring = major, inner = relative minor. Neighbours are highlighted: they're the safest keys to borrow chords from or modulate to.</p>
-            <div id="circle"></div>
+                        <div id="circle"></div>
           </div>
           <div class="panel">
           <div class="panel-title">Tempo &amp; delay calculator</div>
@@ -328,7 +325,7 @@
     <section id="tab-stats" class="tabpane">
       <div class="wrap">
         <div class="page-head">
-          <div><h1>Progress</h1><p class="muted">Saved in this browser. Aim for 80%+ on every topic, then keep revisiting with mixed sessions.</p></div>
+          <div><h1>Progress</h1></div>
           <div class="btnrow"><button id="practiseWeak" class="primary">Practise weakest 5 ▸</button><button id="exportProg" title="Download your progress as a file">⤓ Back up</button><button id="importProg" title="Load progress from a backup file">⤒ Restore</button><input type="file" id="importFile" accept=".json,application/json" hidden><button id="resetStats" class="ghost">Reset</button></div>
         </div>
         <div id="statsBody"></div>

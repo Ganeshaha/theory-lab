@@ -164,8 +164,8 @@ function showTab(name) {
   $('#quizPiano').classList.toggle('hidden', name !== 'quiz');
   $('#explorePiano').classList.toggle('hidden', !['explore', 'create', 'learn'].includes(name));
   if (name === 'stats') renderStats();
-  if (name === 'explore') setDock('Explorer: click keys to play them', ['ans']);
-  if (name === 'create') setDock('Create: the current chord lights up while the loop plays', ['ans'], smallScreen());
+  if (name === 'explore') setDock('', []);
+  if (name === 'create') setDock('', [], smallScreen());
   if (name === 'quiz') quizDockNote();
   $('#main').scrollTop = 0;
 }
@@ -279,14 +279,14 @@ function scoreHTML() { return `<span class="ok">✓ ${S.score}</span><span class
 function tryMsg(t, info) { const el = $('#tryMsg'); el.innerHTML = t || ''; el.classList.toggle('info', !!info); }
 function quizDockNote() {
   updateDockVisibility();
-  if ($('#play').classList.contains('hidden')) { setDock('Free play: click any key', []); return; }
-  if (S.inLesson) { setDock('Mini-lesson: press ▶ Hear it', ['ans'], true); return; }
+  if ($('#play').classList.contains('hidden')) { setDock('', []); return; }
+  if (S.inLesson) { setDock('', [], true); return; }
   if (!S.q) return;
   const q = S.q;
-  if (S.answered) { const has = q.type === 'piano' || q.reveal || (q.show && q.show.length); setDock(has ? 'Answer shown on the keyboard' : 'Free play: click any key', !has ? [] : q.type === 'piano' ? ['ans', 'wrong', 'hint'] : ['ans'], !has); }
-  else if (q.type === 'piano') setDock('<b>Your turn:</b> click the keys, then Submit', ['sel', 'wrong', 'hint'], false, true);
-  else if (q.show && q.show.length) setDock(q.hideLabels ? 'Labels hidden for this question' : 'Look at the highlighted keys', ['q'], false, true);
-  else setDock('Not needed for this question: free play', [], true);
+  if (S.answered) { const has = q.type === 'piano' || q.reveal || (q.show && q.show.length); setDock('', !has ? [] : q.type === 'piano' ? ['ans', 'wrong', 'hint'] : ['ans'], !has); }
+  else if (q.type === 'piano') setDock('', ['sel', 'wrong', 'hint'], false, true);
+  else if (q.show && q.show.length) setDock(q.hideLabels ? 'Labels hidden' : '', ['q'], false, true);
+  else setDock('', [], true);
 }
 
 // ---- explanations: lead with one sentence, rest behind "More" (less to read at once) ----
@@ -836,7 +836,7 @@ class PianoRoll {
       </div>
       <div class="pr-keyinfo"></div>
       <div class="pr-scroll"><div class="pr-grid"></div></div>
-      <div class="pr-hint">Click the grid to add/remove notes. 1 row = 1 semitone; 12 rows = an octave. 2 bars of 1/16 steps. Green notes came from the question.</div>`;
+      <div class="pr-hint"></div>`;
     const grid = el.querySelector('.pr-grid'); let html = '';
     for (let m = HI; m >= LO; m--) {
       const p = m % 12, blk = isBlackPc(p);
@@ -1033,8 +1033,8 @@ function renderFinder() {
   $('#cfGrid').innerHTML = DEFAULT_NAMES.map((n, p) => `<button data-p="${p}" class="${isBlackPc(p) ? 'blk' : ''} ${CF.has(p) ? 'on' : ''}">${disp(n)}</button>`).join('');
   $$('#cfGrid button').forEach(b => b.onclick = () => { const p = +b.dataset.p; CF.has(p) ? CF.delete(p) : (CF.add(p), Snd.note(60 + p)); renderFinder(); });
   const pcs = [...CF].sort((a, b) => a - b); let res = '';
-  if (pcs.length === 0) res = '<span class="muted">Pick 2 or more notes…</span>';
-  else if (pcs.length === 1) res = `<div class="big">${disp(DEFAULT_NAMES[pcs[0]])}</div><span class="muted">Add more notes.</span>`;
+  if (pcs.length === 0) res = '';
+  else if (pcs.length === 1) res = `<div class="big">${disp(DEFAULT_NAMES[pcs[0]])}</div>`;
   else if (pcs.length === 2) {
     const d = pcs[1] - pcs[0], it = INTS.find(x => x.s === d), inv = INTS.find(x => x.s === 12 - d);
     res = `<div class="big">${it.name}</div><span class="alt">${disp(DEFAULT_NAMES[pcs[0]])} up to ${disp(DEFAULT_NAMES[pcs[1]])} = ${d} semitones (or a ${inv.name} the other way)</span>`;

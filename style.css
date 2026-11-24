@@ -761,3 +761,4 @@ button.primary:hover { background: linear-gradient(180deg, #a78dff, #8869fb); }
 .key.white .deg { color: #6a4cf0; } .key.white.keyroot .deg { color: #0b8ba1; }
 .key.black .deg { color: #cbbfff; } .key.black.keyroot .deg { color: #8ff0ff; }
 .piano.hide-labels .deg { visibility: hidden; }
+.pr-hint:empty, .cfout:empty { display: none; }

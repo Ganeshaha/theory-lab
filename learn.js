@@ -69,7 +69,7 @@ const Learn = (() => {
       <div class="panel reader-card">${body}</div>
       <div class="reader-nav">
         <button id="lPrev" ${L.i === 0 ? 'disabled' : ''}>← Back</button>
-        <span class="muted small">${L.i + 1} / ${total} · use ← → keys</span>
+        <span class="muted small">${L.i + 1} / ${total}</span>
         ${last ? '<button id="lPractice2" class="primary">Practise ▶</button>' : '<button id="lFwd" class="primary">Next →</button>'}
       </div>`;
     const k = c.cards[L.i];
@@ -84,7 +84,7 @@ const Learn = (() => {
     if ($('#lPractice2')) $('#lPractice2').onclick = () => $('#lPractice').click();
     if ($('#lNext')) $('#lNext').onclick = () => open(nextId());
     exPiano.clear();
-    setDock(k && k.ex ? 'Press an ▶ example to hear it and see it here' : 'Free play: click any key', ['ans'], true);
+    setDock('', [], true);
     $('#main').scrollTop = 0;
   }
   const nextId = () => order[order.indexOf(L.id) + 1];
