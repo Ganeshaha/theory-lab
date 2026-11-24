@@ -632,7 +632,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'r') Snd.play(S.q.audio);
   else if (k === 'h') hint();
   else if (k === 'l') toggleLessonPeek();
-  else if (k === 'k') { if (TOOLS.roll) roll.keyFromQuestion(); else { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); } }
+  else if (k === 'k') { if (TOOLS.roll) roll.keyFromQuestion(); else $('#dkFromQ').click(); }
 });
 
 // =====================================================================
@@ -1188,7 +1188,7 @@ $('#dkRoot').innerHTML = ROLL_ROOTS.map(r => `<option value="${r}">${disp(r)}</o
 $('#dkType').innerHTML = `<option value="off">Off</option>` + Object.entries(SCALES).map(([id, s]) => `<option value="${id}">${s.name}</option>`).join('');
 $('#dkRoot').onchange = e => setKey(e.target.value, KEYSEL.type === 'off' ? 'major' : KEYSEL.type);
 $('#dkType').onchange = e => setKey(KEYSEL.root, e.target.value);
-$('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); };
+$('#dkFromQ').onclick = () => { const r = applyQuestionKey(); if (!r.ok) dockMsg(r.msg); else $('#dkMsg').classList.add('hidden'); };
 KEY_READY = true; setKey(KEYSEL.root, KEYSEL.type);
 renderKeyTool(); renderFinder(); renderTempoTool(); renderCheat(); applyTools();
 setFocus(store.get('focus', false)); renderHome();
